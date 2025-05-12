@@ -1,10 +1,11 @@
+// src/components/TimelineCalendarView.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TimelineEntry } from '@/lib/types';
-import { isSameDay } from 'date-fns';
+import { isSameDay, getDay } from 'date-fns';
 
 interface TimelineCalendarViewProps {
   entries: TimelineEntry[];
@@ -19,8 +20,9 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
     setHighlightedDays(daysWithEntries);
   }, [entries]);
 
-  const entryDayModifier = {
-    entry: (date: Date) => highlightedDays.some(highlightedDate => isSameDay(date, highlightedDate))
+  const modifiers = {
+    entry: (date: Date) => highlightedDays.some(highlightedDate => isSameDay(date, highlightedDate)),
+    weekend: { daysOfWeek: [0, 6] } // 0 = Sunday, 6 = Saturday
   };
 
   const modifierStyles = {
@@ -28,6 +30,9 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
       backgroundColor: 'hsl(var(--accent))',
       color: 'hsl(var(--accent-foreground))',
       borderRadius: '0.375rem', // rounded-md
+    },
+    weekend: {
+      color: 'hsl(var(--muted-foreground))', // Mute the text color for weekends
     }
   };
 
@@ -38,10 +43,10 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
       </CardHeader>
       <CardContent className="flex justify-center">
         <Calendar
-          mode="single" // Single is for selection, but we use it for display. Month navigation is key.
+          mode="single"
           month={currentMonth}
           onMonthChange={setCurrentMonth}
-          modifiers={entryDayModifier}
+          modifiers={modifiers}
           modifiersStyles={modifierStyles}
           className="rounded-md border"
           captionLayout="dropdown-buttons"
@@ -52,3 +57,4 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
     </Card>
   );
 }
+
