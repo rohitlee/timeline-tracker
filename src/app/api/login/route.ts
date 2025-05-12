@@ -1,20 +1,21 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'POST') {
-    const { username, password } = req.body;
+export async function POST(request: NextRequest) {
+  try {
+    const { username, password } = await request.json();
 
     // Basic simulated authentication (replace with your actual authentication logic)
     if (username === 'user' && password === 'password') {
       // Simulate a successful login
       const user = { userId: 'user123', username: 'user' };
-      res.status(200).json(user);
+      // The login function in src/lib/auth.ts will handle setting cookies based on this response.
+      return NextResponse.json(user, { status: 200 });
     } else {
       // Simulate invalid credentials
-      res.status(401).json({ message: 'Invalid credentials' });
+      return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     }
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+  } catch (error) {
+    console.error('Login API error:', error);
+    return NextResponse.json({ message: 'An unexpected error occurred during login.' }, { status: 500 });
   }
 }
