@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { TimelineEntry, Client, Task } from '@/lib/types';
-import { MOCK_USER_NAME, clients as mockClients, tasks as mockTasks } from '@/data/mockData';
+import { clients as mockClients, tasks as mockTasks } from '@/data/mockData';
 import { getAiSuggestionsAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -106,7 +106,6 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
   const onSubmit = (values: TimelineFormValues) => {
     const newEntry: TimelineEntry = {
       id: entryToEdit ? entryToEdit.id : Date.now().toString(),
-      userName: MOCK_USER_NAME,
       ...values,
     };
     onSaveEntry(newEntry);
@@ -213,7 +212,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
 
             <div>
               <Label htmlFor="user">User</Label>
-              <Input id="user" value={MOCK_USER_NAME} readOnly className="mt-1 bg-muted/50" />
+              <Input id="user" value="Logged-in User (Not implemented yet)" readOnly className="mt-1 bg-muted/50" /> {/* Placeholder */}
             </div>
 
             <div>

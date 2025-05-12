@@ -3,19 +3,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getTimelineEntries } from '@/lib/actions'; // Import the server action
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TimelineEntry } from '@/lib/types';
 import { isSameDay, isWeekend, isPast, startOfDay, isToday, getDaysInMonth, isAfter } from 'date-fns';
 
-interface TimelineCalendarViewProps {
-  entries: TimelineEntry[];
-}
-
-export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
+export function TimelineCalendarView() {
   const [highlightedDays, setHighlightedDays] = useState<Date[]>([]);
+  const [entries, setEntries] = useState<TimelineEntry[]>([]); // Add state for entries
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [missedDays, setMissedDays] = useState<Date[]>([]);
+  const [missedDays, setMissedDays] = useState<Date[]>([]); // Add state for missed days
 
   useEffect(() => {
     const daysWithEntries = entries.map(entry => startOfDay(new Date(entry.date)));
@@ -57,7 +55,18 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
     // If earliestEntryDate is null (no entries), newMissedDays remains empty, so no past days marked red.
     setMissedDays(newMissedDays);
 
-  }, [entries, currentMonth]);
+  }, [entries, currentMonth]); // Add entries to the dependency array
+
+  // Fetch entries when the component mounts or currentMonth changes
+  useEffect(() => {
+    const fetchEntries = async () => {
+      const userEntries = await getTimelineEntries(); // Fetch entries using the server action
+      if (userEntries) {
+        setEntries(userEntries);
+      }
+    };
+    fetchEntries();
+  }, []); // Empty dependency array to fetch only on mount
 
 
   const modifiers = {
