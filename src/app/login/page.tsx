@@ -123,7 +123,7 @@ export default function LoginPage() {
         <CardContent className="mt-0 pb-6 pt-0 text-center">
            <p className="text-sm text-muted-foreground">
              Don't have an account?{' '}
-             <a href="/register" className="font-medium text-primary hover:underline">
+             <a href="/register" className="font-medium text-chart-2 hover:underline">
                Register
              </a>
            </p>
@@ -138,3 +138,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
