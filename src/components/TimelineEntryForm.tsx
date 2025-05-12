@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ChangeEvent, FormEvent} from 'react';
@@ -179,7 +180,7 @@ export function TimelineEntryForm({ onAddEntry, pastEntries }: TimelineEntryForm
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.watch('date') ? format(form.watch('date'), 'dd/MM/yyyy') : <span>Pick a date</span>}
+                    {form.watch('date') ? format(form.watch('date'), 'MM/dd/yyyy') : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">

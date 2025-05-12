@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -98,7 +99,7 @@ export default function HomePage() {
                         <li key={entry.id} className="p-4 border rounded-lg bg-card hover:shadow-md transition-shadow">
                           <div className="flex justify-between items-start">
                             <h4 className="font-medium text-foreground">{entry.description}</h4>
-                            <Badge variant="secondary" className="text-xs">{format(entry.date, 'dd MMM yyyy')}</Badge>
+                            <Badge variant="secondary" className="text-xs">{format(entry.date, 'MM/dd/yyyy')}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
                             Client: <span className="font-medium text-foreground/80">{getClientName(entry.client)}</span> | 
