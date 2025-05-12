@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TimelineEntry } from '@/lib/types';
-import { isSameDay, getDay } from 'date-fns';
+import { isSameDay } from 'date-fns';
 
 interface TimelineCalendarViewProps {
   entries: TimelineEntry[];
@@ -57,4 +57,3 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
     </Card>
   );
 }
-
