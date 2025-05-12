@@ -5,10 +5,10 @@ import Image from 'next/image';
 
 export function TimeWiseHeader() {
   return (
-    <header className="bg-[#1E90FF] shadow-md relative overflow-hidden">
-      {/* Moving clouds animation */}
+    <header className="shadow-md relative overflow-hidden">
+      {/* Moving clouds animation removed */}
+      {/* 
       <div className="absolute inset-0 z-0 opacity-20">
-        {/* Simplified cloud elements for brevity */}
         <div className="cloud absolute top-1/4 left-1/4 w-32 h-16 bg-white rounded-full animate-cloud-move-1"></div>
         <div className="cloud absolute top-1/2 left-3/4 w-40 h-20 bg-white rounded-full animate-cloud-move-2"></div>
         <div className="cloud absolute top-1/3 right-1/4 w-24 h-12 bg-white rounded-full animate-cloud-move-3"></div>
@@ -30,6 +30,7 @@ export function TimeWiseHeader() {
         .animate-cloud-move-2 { animation: cloud-move-2 80s linear infinite 10s; }
         .animate-cloud-move-3 { animation: cloud-move-3 70s linear infinite 5s; }
       `}</style>
+      */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex h-24 items-center justify-center"> {/* Changed justify-between to justify-center */}
           <div className="flex items-center"> {/* Removed mx-auto */}
