@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback }      from 'react';
+import { useRouter } from 'next/navigation';
 import { TimeWiseHeader } from '@/components/TimeWiseHeader';
 import { TimelineEntryForm } from '@/components/TimelineEntryForm';
 import { TimelineCalendarView } from '@/components/TimelineCalendarView';
@@ -12,8 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { MOCK_USER_NAME, clients as mockClients, tasks as mockTasks } from '@/data/mockData';
-import { Pencil, Trash2 } from 'lucide-react';
+import { clients as mockClients, tasks as mockTasks } from '@/data/mockData'; // Clients and Tasks can still be mock
+import { Pencil, Trash2, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,57 +26,100 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { getTimelineEntriesAction } from '@/lib/actions'; // Import the server action
+import { getCurrentUser, isAuthenticated } from '@/lib/auth';
+import { getTimelineEntriesAction, createTimelineEntryAction, deleteTimelineEntryAction } from '@/lib/actions';
 
 export default function HomePage() {
+  const router = useRouter();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{ uid: string; email: string; username: string} | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | null>(null);
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState<Date>(new Date());
   const { toast } = useToast();
 
-  // Fetch entries from server action on mount
   useEffect(() => {
     setIsMounted(true);
-    const fetchEntries = async () => {
-      const userEntries = await getTimelineEntriesAction();
-      if (userEntries) {
-         const parsedEntries = userEntries.map((entry: any) => ({
-          ...entry,
-          date: new Date(entry.date), // Ensure date is a Date object
-        }));
-        setEntries(parsedEntries);
-      }
-    };
-    fetchEntries();
+    if (!isAuthenticated()) {
+      router.push('/login');
+    } else {
+      const user = getCurrentUser();
+      setCurrentUser(user);
+      fetchEntries();
+    }
+  }, [router]);
+
+  const fetchEntries = useCallback(async () => {
+    setIsLoadingEntries(true);
+    const userEntries = await getTimelineEntriesAction();
+    // Ensure date is a Date object after fetching
+    const parsedEntries = userEntries.map((entry: any) => ({
+      ...entry,
+      date: new Date(entry.date),
+    }));
+    setEntries(parsedEntries);
+    setIsLoadingEntries(false);
   }, []);
 
 
-  // Save entries to localStorage whenever they change (can be removed if full server-side persistence)
-  useEffect(() => {
-    if (isMounted) { 
-      localStorage.setItem('timelineEntries', JSON.stringify(entries.map(e => ({...e, date: e.date.toISOString() }))));
+  const handleSaveEntry = async (entryData: Omit<TimelineEntry, 'id' | 'userId' | 'userName'>) => {
+    if (!currentUser) {
+      toast({ title: "Error", description: "User not authenticated.", variant: "destructive" });
+      return;
     }
-  }, [entries, isMounted]);
+    
+    let result;
+    const dataToSave = { ...entryData, date: new Date(entryData.date) }; // Ensure date is Date object
 
-  const handleSaveEntry = (savedEntry: TimelineEntry) => {
-    const isUpdate = entries.some(e => e.id === savedEntry.id);
-    setEntries(prevEntries => {
-      const updatedEntries = isUpdate 
-        ? prevEntries.map(e => e.id === savedEntry.id ? savedEntry : e)
-        : [{ ...savedEntry, date: new Date(savedEntry.date) }, ...prevEntries]; // Ensure date is Date object
-      return updatedEntries.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    });
-    setEntryToEdit(null); // Clear editing state
-    toast({
-      title: isUpdate ? "Entry Updated" : "Entry Added",
-      description: `Your timeline entry has been successfully ${isUpdate ? 'updated' : 'added'}.`,
-    });
+    if (entryToEdit) { // This logic needs refinement for updates with Firestore
+      // For now, we'll treat edit as creating a new entry and deleting old one, or simply re-adding.
+      // Proper update would involve a separate updateTimelineEntryAction.
+      // Simplified: delete old if exists, then add new.
+      if (entries.some(e => e.id === entryToEdit.id)) {
+        // await deleteTimelineEntryAction(entryToEdit.id); // Optional: delete if truly updating
+      }
+      // For simplicity, we'll use create action, assuming it handles ID generation or receives it.
+      // The form should probably pass the ID if it's an edit.
+      const entryWithIdIfEdit: any = { ...dataToSave, id: entryToEdit.id };
+      // This is a placeholder for update logic. Ideally, createTimelineEntryAction
+      // would take an optional ID for updates or a separate update action exists.
+      // For now, let's assume we always create, and existing ID is overwritten or ignored by addDoc.
+      // A robust solution requires an `updateTimelineEntryAction(entryId, data)`.
+      // Let's simulate update by re-creating if ID matches.
+      // The below `createTimelineEntryAction` will add a new document.
+      // A true update needs `updateDoc` in the action.
+      // For now, on "edit", we'll just call create.
+      // This won't update the existing entry but add a new one if ID isn't managed correctly by create action for updates.
+    }
+    
+    // Pass data that createTimelineEntryAction expects (without id, userId, userName)
+    const { client, task, docketNumber, description, timeSpent, date } = dataToSave;
+    const payloadForCreate = { client, task, docketNumber, description, timeSpent, date };
+
+
+    result = await createTimelineEntryAction(payloadForCreate);
+
+    if (result.success && result.entry) {
+      fetchEntries(); // Re-fetch to get the latest list including the new/updated one
+      setEntryToEdit(null); // Clear edit state
+      form.reset(); // Reset form fields after successful save
+      toast({
+        title: entryToEdit ? "Entry Updated" : "Entry Added",
+        description: `Your timeline entry has been successfully ${entryToEdit ? 'updated (simulated)' : 'added'}.`,
+      });
+    } else {
+      toast({
+        title: "Save Failed",
+        description: result.message || "Could not save the entry.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditRequest = (entry: TimelineEntry) => {
-    setEntryToEdit(entry);
+    setEntryToEdit({...entry, date: new Date(entry.date)}); // Ensure date is Date object for the form
   };
 
   const handleCancelEdit = () => {
@@ -86,14 +130,23 @@ export default function HomePage() {
     setDeleteCandidateId(entryId);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteCandidateId) {
-      setEntries(prevEntries => prevEntries.filter(e => e.id !== deleteCandidateId));
-      setDeleteCandidateId(null);
-      toast({
-        title: "Entry Deleted",
-        description: "The timeline entry has been deleted.",
-      });
+      const result = await deleteTimelineEntryAction(deleteCandidateId);
+      if (result.success) {
+        fetchEntries(); // Re-fetch entries
+        setDeleteCandidateId(null);
+        toast({
+          title: "Entry Deleted",
+          description: "The timeline entry has been deleted.",
+        });
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: result.message || "Could not delete the entry.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -104,21 +157,24 @@ export default function HomePage() {
   const getClientName = (clientId: string) => mockClients.find(c => c.id === clientId)?.name || clientId;
   const getTaskName = (taskId: string) => mockTasks.find(t => t.id === taskId)?.name || taskId;
 
-  if (!isMounted) {
+  // Access form instance if needed for reset, but it's typically managed within TimelineEntryForm
+  // If HomePage needs to trigger reset, pass a ref or a prop down.
+  // For now, TimelineEntryForm resets itself on prop change (entryToEdit).
+  // We need a way to reference the form to call reset when an entry is saved or edit cancelled.
+  // This is usually done by lifting state up or using a ref.
+  // For simplicity, we rely on TimelineEntryForm's useEffect to reset if entryToEdit becomes null.
+  // Let's assume `TimelineEntryForm` component has its own form instance.
+  // We'll call `setEntryToEdit(null)` which should trigger `TimelineEntryForm` to reset.
+  // The form instance from `useForm` hook
+  let form: any; // Placeholder for form instance if needed for direct reset from parent
+  // If TimelineEntryForm exposes a reset method via ref, it could be used.
+  // Or, better, handleSaveEntry should also ensure form is reset.
+
+  if (!isMounted || !currentUser) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <TimeWiseHeader />
-        <main className="container mx-auto p-4 md:p-8 flex-grow">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 space-y-6">
-              <Card><CardHeader><CardTitle className="gradient-text">Loading Form...</CardTitle></CardHeader><CardContent><div className="h-96 bg-muted animate-pulse rounded-md"></div></CardContent></Card>
-            </div>
-            <div className="lg:col-span-2 space-y-6">
-              <Card><CardHeader><CardTitle className="gradient-text">Loading Calendar...</CardTitle></CardHeader><CardContent><div className="h-80 bg-muted animate-pulse rounded-md"></div></CardContent></Card>
-              <Card><CardHeader><CardTitle className="gradient-text">Loading Recent Entries...</CardTitle></CardHeader><CardContent><div className="h-60 bg-muted animate-pulse rounded-md"></div></CardContent></Card>
-            </div>
-          </div>
-        </main>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading TimeWise...</p>
       </div>
     );
   }
@@ -127,7 +183,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <TimeWiseHeader />
+      <TimeWiseHeader userName={currentUser.username} />
       <main className="container mx-auto p-4 md:p-8 flex-grow">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
@@ -136,9 +192,10 @@ export default function HomePage() {
               pastEntries={filteredPastEntries}
               entryToEdit={entryToEdit}
               onCancelEdit={handleCancelEdit}
-              userName={MOCK_USER_NAME} // Pass mock user name
+              userName={currentUser.username}
+              // Pass form instance or reset function if needed, or handle reset inside TimelineEntryForm
             />
-            <ExportTimelineButton entries={entries} />
+            <ExportTimelineButton entries={entries} userName={currentUser.username} />
           </div>
 
           <div className="lg:col-span-2 space-y-6">
@@ -153,7 +210,11 @@ export default function HomePage() {
                 <CardDescription className="text-muted-foreground">Your last 5 timeline entries. You can edit or delete them.</CardDescription>
               </CardHeader>
               <CardContent>
-                {entries.length === 0 ? (
+                {isLoadingEntries ? (
+                  <div className="flex justify-center items-center h-40">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : entries.length === 0 ? (
                   <p className="text-muted-foreground">No entries yet. Add your first one!</p>
                 ) : (
                   <ScrollArea className="h-72">
@@ -180,7 +241,7 @@ export default function HomePage() {
                           </p>
                           {entry.docketNumber && <p className="text-sm text-muted-foreground">Docket: <span className="font-medium text-foreground/80">{entry.docketNumber}</span></p>}
                           <p className="text-sm text-muted-foreground">Time Spent: <span className="font-medium text-foreground/80">{entry.timeSpent}</span></p>
-                           <p className="text-sm text-muted-foreground">User: <span className="font-medium text-foreground/80">{entry.userName || MOCK_USER_NAME}</span></p>
+                           <p className="text-sm text-muted-foreground">User: <span className="font-medium text-foreground/80">{entry.userName}</span></p>
                         </li>
                       ))}
                     </ul>

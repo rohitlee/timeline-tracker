@@ -20,17 +20,18 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import type { TimelineEntry } from '@/lib/types';
-import { MOCK_USER_NAME, clients as mockClients, tasks as mockTasks } from '@/data/mockData'; // For mapping IDs to names
+import { clients as mockClients, tasks as mockTasks } from '@/data/mockData'; 
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface ExportTimelineButtonProps {
   entries: TimelineEntry[];
+  userName: string; // Added userName prop
 }
 
 type ExportFormat = 'csv' | 'tsv';
 
-export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
+export function ExportTimelineButton({ entries, userName }: ExportTimelineButtonProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -44,14 +45,14 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
     const headers = ['Date', 'Type', 'Name', 'Client', 'Task', 'Our Docket #', 'Description', 'Time Spent'].join(delimiter);
     
     const rows = data.map(entry => [
-      format(new Date(entry.date), 'MM/dd/yyyy'), // Date format MM/dd/yyyy
-      'Time', // Hardcoded 'Type' as "Time"
-      entry.userName, // Name (User Name)
-      getClientName(entry.client), // Client
-      getTaskName(entry.task), // Task
-      entry.docketNumber || '', // Our Docket #
-      formatType === 'csv' ? `"${entry.description.replace(/"/g, '""')}"` : entry.description, // Description
-      entry.timeSpent // Time Spent
+      format(new Date(entry.date), 'MM/dd/yyyy'), 
+      'Time', 
+      entry.userName, 
+      getClientName(entry.client), 
+      getTaskName(entry.task), 
+      entry.docketNumber || '', 
+      formatType === 'csv' ? `"${entry.description.replace(/"/g, '""')}"` : entry.description, 
+      entry.timeSpent 
     ].join(delimiter));
 
     return [headers, ...rows].join('\n');
@@ -85,7 +86,7 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
         if (eDate) {
           return dfIsEqual(entryDate, eDate) || dfIsBefore(entryDate, eDate);
         }
-        return true; // Should not happen if startDate or endDate is defined
+        return true;
       });
     }
 
@@ -103,7 +104,8 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
     const blob = new Blob([formattedData], { type: exportFormat === 'csv' ? 'text/csv;charset=utf-8;' : 'text/tab-separated-values;charset=utf-8;' });
     
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const filename = `${todayStr} ${MOCK_USER_NAME}.${exportFormat === 'csv' ? 'csv' : 'txt'}`;
+    // Use the provided userName for the filename
+    const filename = `${todayStr} ${userName.replace(/\s+/g, '_')}.${exportFormat === 'csv' ? 'csv' : 'txt'}`; 
     
     const link = document.createElement('a');
     if (link.download !== undefined) { 
@@ -227,4 +229,3 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
     </div>
   );
 }
-

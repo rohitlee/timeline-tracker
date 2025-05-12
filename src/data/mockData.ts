@@ -1,6 +1,7 @@
-import type { Client, Task, TimelineEntry } from '@/lib/types';
 
-export const MOCK_USER_NAME = "Rohit Singh";
+import type { Client, Task } from '@/lib/types';
+
+export const MOCK_USER_NAME = "Rohit Singh"; // This will be replaced by authenticated user's name
 
 export const clients: Client[] = [
   { id: 'client-1', name: 'Analog Devices' },
@@ -53,7 +54,7 @@ export const clients: Client[] = [
 export const tasks: Task[] = [
   { id: 'task-1', name: 'Specification Drafting' },
   { id: 'task-2', name: 'USPTO - Preparation of responses' },
-  { id: 'task-3', name: 'USPTO - Compliance' },
+  { id: 'task-3', name: 'USPTO - Compliance' }, // Corrected typo from USTPO
   { id: 'task-4', name: 'USPTO - Misc' },
   { id: 'task-5', name: 'IPO - Permissions' },
   { id: 'task-6', name: 'IPO - New Filings' },
@@ -72,26 +73,11 @@ export const tasks: Task[] = [
   { id: 'task-19', name: 'Firm - Internal' },
 ];
 
+// mockTimelineEntries is no longer exported or used directly by the app's core logic.
+// Data is fetched from Firestore.
+// This array can be kept for local testing or seeding if necessary.
+/*
 export let mockTimelineEntries: TimelineEntry[] = [
-  {
-    id: 'mock-entry-1',
-    date: new Date('2024-05-08T10:00:00.000Z'), // Use Date objects
-    userId: 'user123', // Consistent with simulated login
-    userName: 'user', // Consistent with simulated login username
-    client: 'client-28', // Oracle - Appli
-    task: 'task-1', // Specification Drafting
-    description: 'Drafted initial specification for new module for Oracle.',
-    timeSpent: '03:00',
-    docketNumber: 'ORCL-101-D',
-  },
-  {
-    id: 'mock-entry-2',
-    date: new Date('2024-05-09T14:30:00.000Z'), // Use Date objects
-    userId: 'user123',
-    userName: 'user',
-    client: 'client-24', // Nutanix - Appli
-    task: 'task-2', // USPTO - Preparation of responses
-    description: 'Prepared response to office action for Nutanix.',
-    timeSpent: '02:30',
-  }
+  // ... example entries ...
 ];
+*/

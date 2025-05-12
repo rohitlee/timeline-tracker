@@ -1,7 +1,6 @@
 
 'use client';
 
-import type { FormEvent} from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -28,11 +27,12 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { TimelineEntry, Client, Task } from '@/lib/types';
+import type { TimelineEntry, Client, Task } from '@/lib/types'; // TimelineEntry for pastEntries
 import { clients as mockClients, tasks as mockTasks } from '@/data/mockData';
 import { getAiSuggestionsAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 
+// This schema defines the shape of the form data
 const formSchema = z.object({
   date: z.date({ required_error: 'Date is required.' }),
   client: z.string().min(1, 'Client is required.'),
@@ -42,14 +42,19 @@ const formSchema = z.object({
   timeSpent: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM). Example: 01:30 for 1 hour 30 mins.'),
 });
 
+// This type is inferred from the schema and represents the form values
 type TimelineFormValues = z.infer<typeof formSchema>;
 
 interface TimelineEntryFormProps {
-  onSaveEntry: (entry: TimelineEntry) => void;
-  pastEntries: TimelineEntry[];
-  entryToEdit?: TimelineEntry | null;
+  // onSaveEntry expects data that matches TimelineFormValues, 
+  // as it's the direct output of the form, already validated.
+  // The parent component (HomePage) will then transform this into a full TimelineEntry 
+  // (adding id, userId, userName) before calling the server action.
+  onSaveEntry: (entryData: TimelineFormValues) => void; 
+  pastEntries: TimelineEntry[]; // For AI suggestions
+  entryToEdit?: TimelineEntry | null; // Full TimelineEntry for editing
   onCancelEdit?: () => void;
-  userName: string;
+  userName: string; // Authenticated user's name
 }
 
 export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCancelEdit, userName }: TimelineEntryFormProps) {
@@ -76,7 +81,6 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
   });
 
   useEffect(() => {
-    // In a real app, these would be fetched from an API
     setClients(mockClients);
     setTasks(mockTasks);
   }, []);
@@ -84,7 +88,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
   useEffect(() => {
     if (entryToEdit) {
       form.reset({
-        date: new Date(entryToEdit.date),
+        date: new Date(entryToEdit.date), // Ensure date is JS Date
         client: entryToEdit.client,
         task: entryToEdit.task,
         docketNumber: entryToEdit.docketNumber || '',
@@ -92,7 +96,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
         timeSpent: entryToEdit.timeSpent,
       });
     } else {
-      form.reset({
+      form.reset({ // Default values for new entry
         date: new Date(),
         client: '',
         task: '',
@@ -105,17 +109,13 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
 
 
   const onSubmit = (values: TimelineFormValues) => {
-    const newEntry: TimelineEntry = {
-      id: entryToEdit ? entryToEdit.id : Date.now().toString(),
-      userId: 'user123', // Placeholder, replace with actual user ID from auth
-      userName: userName, // Pass the userName prop
-      ...values,
-      date: values.date, // Ensure date is passed directly
-    };
-    onSaveEntry(newEntry);
-    // Form reset is handled by useEffect watching entryToEdit prop change in parent
+    // `values` already has `date` as a Date object due to react-hook-form and Zod transform.
+    // Pass these validated form values to the parent.
+    onSaveEntry(values); 
+    // Resetting form to default for new entry, or clearing edit state, is handled by useEffect above
+    // or by the parent component by clearing `entryToEdit`.
   };
-
+  
   const handleSuggestionFetch = useCallback(async (fieldType: 'docket' | 'description', currentValue: string) => {
     if (!currentValue.trim() || currentValue.length < 3) { 
       if (fieldType === 'docket') setShowDocketSuggestions(false);
@@ -124,7 +124,8 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
     }
 
     setIsSuggestionLoading(true);
-    const stringPastEntries = pastEntries.map(e => `${e.description} (Docket: ${e.docketNumber || 'N/A'})`);
+    // Ensure pastEntries dates are strings if the AI expects that. Here, using description and docket.
+    const stringPastEntries = pastEntries.map(e => `${e.description} (Client: ${e.client}, Task: ${e.task}, Docket: ${e.docketNumber || 'N/A'})`);
     
     try {
       const suggestions = await getAiSuggestionsAction({
@@ -207,7 +208,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
                   <Calendar
                     mode="single"
                     selected={form.watch('date')}
-                    onSelect={(date) => form.setValue('date', date || new Date())}
+                    onSelect={(date) => form.setValue('date', date || new Date())} // RHF handles Date object
                     initialFocus
                     className="bg-popover text-popover-foreground"
                      classNames={{
@@ -285,7 +286,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
                     <div
                       key={i}
                       className="p-2 hover:bg-muted rounded-md cursor-pointer text-sm text-popover-foreground"
-                      onMouseDown={() => { // Use onMouseDown to prevent onBlur from firing first
+                      onMouseDown={() => { 
                         form.setValue('docketNumber', s);
                         setShowDocketSuggestions(false);
                       }}
@@ -321,7 +322,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
                     <div
                       key={i}
                       className="p-2 hover:bg-muted rounded-md cursor-pointer text-sm text-popover-foreground"
-                      onMouseDown={() => { // Use onMouseDown to prevent onBlur from firing first
+                      onMouseDown={() => {
                         form.setValue('description', s);
                         setShowDescriptionSuggestions(false);
                       }}
