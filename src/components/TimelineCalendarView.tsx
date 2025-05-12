@@ -8,6 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { TimelineEntry } from '@/lib/types';
 import { isSameDay, isWeekend, isPast, startOfDay, isToday, getDaysInMonth, isAfter, format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface TimelineCalendarViewProps {
   entries: TimelineEntry[]; // Receive entries as a prop
@@ -95,16 +96,16 @@ export function TimelineCalendarView({ entries, onMonthChange, currentMonth }: T
     <Card className="shadow-lg w-full"> {/* Added w-full */}
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-foreground gradient-text">Timeline Overview</CardTitle>
-        <CardDescription>Calendar view of your timeline entries. Days with entries are highlighted. Missed workdays are flagged.</CardDescription>
+        <CardDescription className="text-muted-foreground">Calendar view of your timeline entries. Days with entries are highlighted. Missed workdays are flagged.</CardDescription>
       </CardHeader>
-      <CardContent className="flex justify-center p-0 sm:p-2 md:p-4"> {/* Adjusted padding */}
+      <CardContent className="flex justify-center p-0 sm:p-2 md:p-4"> {/* Centered calendar and adjusted padding */}
         <Calendar
           mode="single"
           month={currentMonth}
           onMonthChange={onMonthChange}
           modifiers={modifiers}
           modifiersStyles={modifierStyles}
-          className="rounded-md border-0 w-full p-0 sm:p-2 md:p-4" // Added w-full, adjusted padding, removed border
+          className="rounded-md border-0 p-0 sm:p-2 md:p-4 max-w-full sm:max-w-md md:max-w-lg" // Adjusted padding, removed border, set max-width for responsiveness
           classNames={{
             caption_label: "text-lg font-medium gradient-text", // Larger text for month/year
             nav_button: "h-8 w-8 rounded-full bg-transparent hover:bg-muted border-0", // Round nav buttons, no border
@@ -126,8 +127,3 @@ export function TimelineCalendarView({ entries, onMonthChange, currentMonth }: T
     </Card>
   );
 }
-
-// Helper to apply custom styles to react-day-picker elements
-// This is a bit hacky and might need adjustments based on react-day-picker's internal structure.
-// Consider using a more robust theming solution if available.
-const cn = (...args: any[]) => args.filter(Boolean).join(' ');
