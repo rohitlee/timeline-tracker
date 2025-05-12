@@ -10,13 +10,29 @@ import type { TimelineEntry } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { MOCK_USER_NAME, clients as mockClients, tasks as mockTasks } from '@/data/mockData';
+import { Pencil, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function HomePage() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | null>(null);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Load entries from localStorage on mount
   useEffect(() => {
@@ -38,20 +54,56 @@ export default function HomePage() {
 
   // Save entries to localStorage whenever they change
   useEffect(() => {
-    if (isMounted) { // Only run after initial mount to avoid SSR/localStorage mismatch
+    if (isMounted) { 
       localStorage.setItem('timelineEntries', JSON.stringify(entries));
     }
   }, [entries, isMounted]);
 
-  const handleAddEntry = (newEntry: TimelineEntry) => {
-    setEntries(prevEntries => [newEntry, ...prevEntries].sort((a,b) => b.date.getTime() - a.date.getTime()));
+  const handleSaveEntry = (savedEntry: TimelineEntry) => {
+    const isUpdate = entries.some(e => e.id === savedEntry.id);
+    setEntries(prevEntries => {
+      const updatedEntries = isUpdate 
+        ? prevEntries.map(e => e.id === savedEntry.id ? savedEntry : e)
+        : [savedEntry, ...prevEntries];
+      return updatedEntries.sort((a,b) => b.date.getTime() - a.date.getTime());
+    });
+    setEntryToEdit(null); // Clear editing state
+    toast({
+      title: isUpdate ? "Entry Updated" : "Entry Added",
+      description: `Your timeline entry has been successfully ${isUpdate ? 'updated' : 'added'}.`,
+    });
+  };
+
+  const handleEditRequest = (entry: TimelineEntry) => {
+    setEntryToEdit(entry);
+  };
+
+  const handleCancelEdit = () => {
+    setEntryToEdit(null);
+  };
+
+  const requestDelete = (entryId: string) => {
+    setDeleteCandidateId(entryId);
+  };
+
+  const confirmDelete = () => {
+    if (deleteCandidateId) {
+      setEntries(prevEntries => prevEntries.filter(e => e.id !== deleteCandidateId));
+      setDeleteCandidateId(null);
+      toast({
+        title: "Entry Deleted",
+        description: "The timeline entry has been deleted.",
+      });
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteCandidateId(null);
   };
 
   const getClientName = (clientId: string) => mockClients.find(c => c.id === clientId)?.name || clientId;
   const getTaskName = (taskId: string) => mockTasks.find(t => t.id === taskId)?.name || taskId;
 
-
-  // Skeleton for recent entries while loading from localStorage
   if (!isMounted) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -71,6 +123,7 @@ export default function HomePage() {
     );
   }
   
+  const filteredPastEntries = entries.filter(e => !entryToEdit || e.id !== entryToEdit.id);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -78,7 +131,12 @@ export default function HomePage() {
       <main className="container mx-auto p-4 md:p-8 flex-grow">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
-            <TimelineEntryForm onAddEntry={handleAddEntry} pastEntries={entries} />
+            <TimelineEntryForm 
+              onSaveEntry={handleSaveEntry} 
+              pastEntries={filteredPastEntries}
+              entryToEdit={entryToEdit}
+              onCancelEdit={handleCancelEdit}
+            />
             <ExportTimelineButton entries={entries} />
           </div>
 
@@ -87,7 +145,7 @@ export default function HomePage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">Recent Entries</CardTitle>
-                <CardDescription>Your last 5 timeline entries.</CardDescription>
+                <CardDescription>Your last 5 timeline entries. You can edit or delete them.</CardDescription>
               </CardHeader>
               <CardContent>
                 {entries.length === 0 ? (
@@ -99,7 +157,17 @@ export default function HomePage() {
                         <li key={entry.id} className="p-4 border rounded-lg bg-card hover:shadow-md transition-shadow">
                           <div className="flex justify-between items-start">
                             <h4 className="font-medium text-foreground">{entry.description}</h4>
-                            <Badge variant="secondary" className="text-xs">{format(entry.date, 'MM/dd/yyyy')}</Badge>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="secondary" className="text-xs">{format(entry.date, 'MM/dd/yyyy')}</Badge>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditRequest(entry)}>
+                                <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                <span className="sr-only">Edit entry</span>
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => requestDelete(entry.id)}>
+                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                <span className="sr-only">Delete entry</span>
+                              </Button>
+                            </div>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
                             Client: <span className="font-medium text-foreground/80">{getClientName(entry.client)}</span> | 
@@ -120,6 +188,26 @@ export default function HomePage() {
       <footer className="text-center p-4 text-sm text-muted-foreground border-t mt-8">
         © {new Date().getFullYear()} TimeWise - Built with Firebase Studio
       </footer>
+
+      {deleteCandidateId && (
+        <AlertDialog open={!!deleteCandidateId} onOpenChange={(open) => !open && cancelDelete()}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the timeline entry.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
