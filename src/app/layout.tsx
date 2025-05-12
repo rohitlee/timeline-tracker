@@ -1,14 +1,17 @@
 
 import type { Metadata } from 'next';
-// Import GeistSans and GeistMono directly from their specific paths
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+import { Roboto } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 // GeistSans and GeistMono are imported as font objects.
 // Their 'variable' property contains the CSS class name that defines the font's CSS custom property.
 // We use these directly in the className of the html or body tag.
+
+const roboto = Roboto({
+  weight: ['400', '700'],
+  subsets: ['latin'],
+});
 
 export const metadata: Metadata = {
   title: 'TimeWise',
@@ -28,7 +31,7 @@ export default function RootLayout({
         This makes the CSS variables (--font-geist-sans, --font-geist-mono)
         available for use in globals.css and Tailwind configuration.
       */}
-      <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground`}>
+      <body className={`${roboto.className} antialiased bg-background text-foreground`}>
         {children}
         <Toaster />
       </body>
