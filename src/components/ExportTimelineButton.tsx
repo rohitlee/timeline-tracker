@@ -2,8 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { Download } from 'lucide-react';
+import { format, isAfter as dfIsAfter, isBefore as dfIsBefore, isEqual as dfIsEqual, startOfDay } from 'date-fns';
+import { CalendarIcon, Download, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -12,9 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Label } from '@/components/ui/label';
 import type { TimelineEntry } from '@/lib/types';
 import { MOCK_USER_NAME, clients as mockClients, tasks as mockTasks } from '@/data/mockData'; // For mapping IDs to names
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface ExportTimelineButtonProps {
   entries: TimelineEntry[];
@@ -24,6 +32,8 @@ type ExportFormat = 'csv' | 'tsv';
 
 export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
 
   const getClientName = (clientId: string) => mockClients.find(c => c.id === clientId)?.name || clientId;
@@ -40,7 +50,6 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
       getClientName(entry.client), // Client
       getTaskName(entry.task), // Task
       entry.docketNumber || '', // Our Docket #
-      // Ensure description is safe for CSV/TSV (e.g., escape quotes if CSV)
       formatType === 'csv' ? `"${entry.description.replace(/"/g, '""')}"` : entry.description, // Description
       entry.timeSpent // Time Spent
     ].join(delimiter));
@@ -49,23 +58,55 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
   };
 
   const handleExport = () => {
-    if (entries.length === 0) {
+    if (startDate && endDate && dfIsAfter(startOfDay(startDate), startOfDay(endDate))) {
       toast({
-        title: "No Data",
-        description: "There are no entries to export.",
+        title: "Invalid Date Range",
+        description: "Start date cannot be after end date.",
         variant: "destructive",
       });
       return;
     }
 
-    const formattedData = formatData(entries, exportFormat);
+    let filteredEntries = entries;
+
+    if (startDate || endDate) {
+      filteredEntries = entries.filter(entry => {
+        const entryDate = startOfDay(new Date(entry.date));
+        const sDate = startDate ? startOfDay(startDate) : null;
+        const eDate = endDate ? startOfDay(endDate) : null;
+
+        if (sDate && eDate) {
+          return (dfIsEqual(entryDate, sDate) || dfIsAfter(entryDate, sDate)) &&
+                 (dfIsEqual(entryDate, eDate) || dfIsBefore(entryDate, eDate));
+        }
+        if (sDate) {
+          return dfIsEqual(entryDate, sDate) || dfIsAfter(entryDate, sDate);
+        }
+        if (eDate) {
+          return dfIsEqual(entryDate, eDate) || dfIsBefore(entryDate, eDate);
+        }
+        return true; // Should not happen if startDate or endDate is defined
+      });
+    }
+
+
+    if (filteredEntries.length === 0) {
+      toast({
+        title: "No Data",
+        description: "There are no entries to export for the selected criteria.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formattedData = formatData(filteredEntries, exportFormat);
     const blob = new Blob([formattedData], { type: exportFormat === 'csv' ? 'text/csv;charset=utf-8;' : 'text/tab-separated-values;charset=utf-8;' });
     
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const filename = `${todayStr} ${MOCK_USER_NAME}.${exportFormat === 'csv' ? 'csv' : 'txt'}`;
     
     const link = document.createElement('a');
-    if (link.download !== undefined) { // Feature detection
+    if (link.download !== undefined) { 
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
       link.setAttribute('download', filename);
@@ -87,9 +128,87 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
     }
   };
 
+  const clearDateRange = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    toast({
+      title: "Date Range Cleared",
+      description: "Export will include all entries.",
+    });
+  };
+
   return (
     <div className="mt-8 p-6 bg-card rounded-lg shadow-md">
-      <h3 className="text-lg font-semibold mb-3 text-foreground">Export Timeline</h3>
+      <h3 className="text-lg font-semibold mb-4 text-foreground">Export Timeline</h3>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <Label htmlFor="startDate">Start Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="startDate"
+                variant={'outline'}
+                className={cn(
+                  'w-full justify-start text-left font-normal mt-1',
+                  !startDate && 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {startDate ? format(startDate, 'MM/dd/yyyy') : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={setStartDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div>
+          <Label htmlFor="endDate">End Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="endDate"
+                variant={'outline'}
+                className={cn(
+                  'w-full justify-start text-left font-normal mt-1',
+                  !endDate && 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {endDate ? format(endDate, 'MM/dd/yyyy') : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={endDate}
+                onSelect={setEndDate}
+                disabled={(date) => startDate ? dfIsBefore(date, startDate) : false}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {(startDate || endDate) && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={clearDateRange}
+          className="mb-4 w-full sm:w-auto"
+        >
+          <XCircle className="mr-2 h-4 w-4" />
+          Clear Date Range
+        </Button>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <Select value={exportFormat} onValueChange={(value: string) => setExportFormat(value as ExportFormat)}>
           <SelectTrigger className="w-full sm:w-[180px]">
