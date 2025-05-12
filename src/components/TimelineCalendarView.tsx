@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TimelineEntry } from '@/lib/types';
-import { isSameDay, isWeekend, isPast, startOfDay, isToday, getDaysInMonth } from 'date-fns';
+import { isSameDay, isWeekend, isPast, startOfDay, isToday, getDaysInMonth, isAfter } from 'date-fns';
 
 interface TimelineCalendarViewProps {
   entries: TimelineEntry[];
@@ -24,22 +24,38 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
     const today = startOfDay(new Date());
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const numDaysInMonth = getDaysInMonth(currentMonth); // Use getDaysInMonth for accuracy
+    const numDaysInMonth = getDaysInMonth(currentMonth);
     const newMissedDays: Date[] = [];
 
-    for (let day = 1; day <= numDaysInMonth; day++) {
-      const currentDate = startOfDay(new Date(year, month, day));
-      
-      // A day is missed if:
-      // 1. It's a weekday (not Saturday or Sunday).
-      // 2. It's in the past or is today.
-      // 3. There is no timeline entry for that day.
-      if (!isWeekend(currentDate) && 
-          (isPast(currentDate) || isToday(currentDate)) && 
-          !daysWithEntries.some(entryDay => isSameDay(currentDate, entryDay))) {
-        newMissedDays.push(currentDate);
+    let earliestEntryDate: Date | null = null;
+    if (entries.length > 0) {
+      // Sort entries by date to find the earliest one
+      const sortedEntries = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      if (sortedEntries[0] && sortedEntries[0].date) {
+        earliestEntryDate = startOfDay(new Date(sortedEntries[0].date));
       }
     }
+
+    // Only calculate missed days if there's at least one entry and thus an earliestEntryDate
+    if (earliestEntryDate) {
+      for (let day = 1; day <= numDaysInMonth; day++) {
+        const currentDate = startOfDay(new Date(year, month, day));
+        
+        // A day is missed if:
+        // 1. It's a weekday.
+        // 2. It's strictly after the earliest entry date.
+        // 3. It's in the past or is today (but not in the future).
+        // 4. There is no timeline entry for that day.
+        if (!isWeekend(currentDate) &&
+            isAfter(currentDate, earliestEntryDate) && 
+            (isPast(currentDate) || isToday(currentDate)) && // Ensures we only check up to today
+            currentDate <= today && // Double ensure not future, (isPast || isToday) should cover this
+            !daysWithEntries.some(entryDay => isSameDay(currentDate, entryDay))) {
+          newMissedDays.push(currentDate);
+        }
+      }
+    }
+    // If earliestEntryDate is null (no entries), newMissedDays remains empty, so no past days marked red.
     setMissedDays(newMissedDays);
 
   }, [entries, currentMonth]);
