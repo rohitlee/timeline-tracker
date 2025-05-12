@@ -39,7 +39,7 @@ export function TimeWiseHeader() {
               The src prop should be the path relative to the public directory, e.g., /timewise-logo.png
             */}
             <Image
-              src="/timewise-logo.png" // Path relative to public directory
+              src="https://iili.io/38aoDx9.png" // Path relative to public directory
               alt="TimeWise Logo"
               width={200} // Adjusted width, can be fine-tuned
               height={80} // Adjusted height, can be fine-tuned
