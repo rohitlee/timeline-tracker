@@ -36,8 +36,8 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
-      typeof className === 'string' ? className.replace("tracking-tight", "tracking-wide") : className
+      "text-2xl font-semibold leading-none tracking-wide", // Changed from tracking-tight to tracking-wide
+      className
     )}
     {...props}
   />
