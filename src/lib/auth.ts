@@ -38,7 +38,7 @@ export const login = async (username: string, password: string): Promise<{ usern
   }
 };
 
-export const getCurrentUser = (): { username: string } | null => {
+export const getCurrentUser = (): { userId: string; username: string } | null => {
   const userCookie = Cookies.get('user');
   return userCookie ? JSON.parse(userCookie) : null;
 };

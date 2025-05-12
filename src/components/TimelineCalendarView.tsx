@@ -3,17 +3,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getTimelineEntries } from '@/lib/actions'; // Import the server action
+import { getTimelineEntriesAction } from '@/lib/actions'; // Import the server action
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { TimelineEntry } from '@/lib/types';
-import { isSameDay, isWeekend, isPast, startOfDay, isToday, getDaysInMonth, isAfter } from 'date-fns';
+import { isSameDay, isWeekend, isPast, startOfDay, isToday, getDaysInMonth, isAfter, format } from 'date-fns';
 
-export function TimelineCalendarView() {
+interface TimelineCalendarViewProps {
+  entries: TimelineEntry[]; // Receive entries as a prop
+  onMonthChange: (month: Date) => void; // Prop to handle month change
+  currentMonth: Date; // Prop for the current month
+}
+
+
+export function TimelineCalendarView({ entries, onMonthChange, currentMonth }: TimelineCalendarViewProps) {
   const [highlightedDays, setHighlightedDays] = useState<Date[]>([]);
-  const [entries, setEntries] = useState<TimelineEntry[]>([]); // Add state for entries
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [missedDays, setMissedDays] = useState<Date[]>([]); // Add state for missed days
+  const [missedDays, setMissedDays] = useState<Date[]>([]);
 
   useEffect(() => {
     const daysWithEntries = entries.map(entry => startOfDay(new Date(entry.date)));
@@ -27,91 +32,102 @@ export function TimelineCalendarView() {
 
     let earliestEntryDate: Date | null = null;
     if (entries.length > 0) {
-      // Sort entries by date to find the earliest one
       const sortedEntries = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       if (sortedEntries[0] && sortedEntries[0].date) {
         earliestEntryDate = startOfDay(new Date(sortedEntries[0].date));
       }
     }
 
-    // Only calculate missed days if there's at least one entry and thus an earliestEntryDate
     if (earliestEntryDate) {
       for (let day = 1; day <= numDaysInMonth; day++) {
         const currentDate = startOfDay(new Date(year, month, day));
         
-        // A day is missed if:
-        // 1. It's a weekday.
-        // 2. It's strictly after the earliest entry date. // Changed from on or after to strictly after
-        // 3. It's in the past (but not today or in the future).
-        // 4. There is no timeline entry for that day.
         if (!isWeekend(currentDate) &&
-            earliestEntryDate && isAfter(currentDate, earliestEntryDate) && // ensure earliestEntryDate is not null
-            isPast(currentDate) && !isToday(currentDate) && // ensure it's strictly in the past
+            earliestEntryDate && isAfter(currentDate, earliestEntryDate) && 
+            isPast(currentDate) && !isToday(currentDate) && 
             !daysWithEntries.some(entryDay => isSameDay(currentDate, entryDay))) {
           newMissedDays.push(currentDate);
         }
       }
     }
-    // If earliestEntryDate is null (no entries), newMissedDays remains empty, so no past days marked red.
     setMissedDays(newMissedDays);
 
-  }, [entries, currentMonth]); // Add entries to the dependency array
-
-  // Fetch entries when the component mounts or currentMonth changes
-  useEffect(() => {
-    const fetchEntries = async () => {
-      const userEntries = await getTimelineEntries(); // Fetch entries using the server action
-      if (userEntries) {
-        setEntries(userEntries);
-      }
-    };
-    fetchEntries();
-  }, []); // Empty dependency array to fetch only on mount
+  }, [entries, currentMonth]);
 
 
   const modifiers = {
     entry: (date: Date) => highlightedDays.some(highlightedDate => isSameDay(date, highlightedDate)),
     weekend: (date: Date) => isWeekend(date),
     missed: (date: Date) => missedDays.some(missedDate => isSameDay(date, missedDate)),
+    today: (date: Date) => isToday(date),
   };
 
   const modifierStyles = {
     entry: {
       backgroundColor: 'hsl(var(--accent))',
       color: 'hsl(var(--accent-foreground))',
-      borderRadius: '0.375rem',
+      borderRadius: '9999px', // Make it round
+      border: 'none',
     },
     weekend: {
       color: 'hsl(var(--muted-foreground))',
     },
     missed: {
-      backgroundColor: 'hsl(var(--destructive))',
-      color: 'hsl(var(--destructive-foreground))',
-      borderRadius: '0.375rem',
+      backgroundColor: '#FDE1E1', // Button color #FDE1E1
+      color: '#FD0101', // Font color #FD0101
+      borderRadius: '9999px', // Make it round
+      border: 'none',
+    },
+    day: { // Default day style
+      borderRadius: '9999px', // Make it round
+      color: '#9301FD', // Font color #9301FD
+      backgroundColor: '#F1E1FD', // Button color #F1E1FD
+      border: 'none',
+    },
+    today: {
+      fontWeight: 'bold',
+      border: '2px solid hsl(var(--primary))',
+      borderRadius: '9999px',
     }
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg w-full"> {/* Added w-full */}
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-foreground">Timeline Overview</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-foreground gradient-text">Timeline Overview</CardTitle>
+        <CardDescription>Calendar view of your timeline entries. Days with entries are highlighted. Missed workdays are flagged.</CardDescription>
       </CardHeader>
-      <CardContent className="flex justify-center">
+      <CardContent className="flex justify-center p-0 sm:p-2 md:p-4"> {/* Adjusted padding */}
         <Calendar
           mode="single"
           month={currentMonth}
-          onMonthChange={setCurrentMonth}
+          onMonthChange={onMonthChange}
           modifiers={modifiers}
           modifiersStyles={modifierStyles}
-          className="rounded-md border"
-          captionLayout="dropdown-buttons"
+          className="rounded-md border-0 w-full p-0 sm:p-2 md:p-4" // Added w-full, adjusted padding, removed border
+          classNames={{
+            caption_label: "text-lg font-medium gradient-text", // Larger text for month/year
+            nav_button: "h-8 w-8 rounded-full bg-transparent hover:bg-muted border-0", // Round nav buttons, no border
+            day: cn(
+              "h-10 w-10 p-0 font-normal aria-selected:opacity-100 rounded-full", // Default day button styling
+              "hover:bg-muted focus:bg-muted"
+            ),
+            
+          }}
+          captionLayout="dropdown-buttons" 
           fromYear={new Date().getFullYear() - 5}
           toYear={new Date().getFullYear() + 5}
-          labelMonthDropdown=""
-          labelYearDropdown=""
+          formatters={{
+            formatCaption: (date) => `${format(date, 'MMMM yyyy')}`,
+          }}
+        
         />
       </CardContent>
     </Card>
   );
 }
 
+// Helper to apply custom styles to react-day-picker elements
+// This is a bit hacky and might need adjustments based on react-day-picker's internal structure.
+// Consider using a more robust theming solution if available.
+const cn = (...args: any[]) => args.filter(Boolean).join(' ');

@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, User } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { TimelineEntry, Client, Task } from '@/lib/types';
 import { clients as mockClients, tasks as mockTasks } from '@/data/mockData';
@@ -49,9 +49,10 @@ interface TimelineEntryFormProps {
   pastEntries: TimelineEntry[];
   entryToEdit?: TimelineEntry | null;
   onCancelEdit?: () => void;
+  userName: string;
 }
 
-export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCancelEdit }: TimelineEntryFormProps) {
+export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCancelEdit, userName }: TimelineEntryFormProps) {
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -106,7 +107,10 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
   const onSubmit = (values: TimelineFormValues) => {
     const newEntry: TimelineEntry = {
       id: entryToEdit ? entryToEdit.id : Date.now().toString(),
+      userId: 'user123', // Placeholder, replace with actual user ID from auth
+      userName: userName, // Pass the userName prop
       ...values,
+      date: values.date, // Ensure date is passed directly
     };
     onSaveEntry(newEntry);
     // Form reset is handled by useEffect watching entryToEdit prop change in parent
@@ -120,7 +124,6 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
     }
 
     setIsSuggestionLoading(true);
-    // Use the pastEntries prop which is already filtered in HomePage
     const stringPastEntries = pastEntries.map(e => `${e.description} (Docket: ${e.docketNumber || 'N/A'})`);
     
     try {
@@ -149,61 +152,68 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
   }, [pastEntries, toast]);
   
   useEffect(() => {
-    const descriptionValue = form.watch('description');
-    if (descriptionValue) {
-      const handler = setTimeout(() => {
-        handleSuggestionFetch('description', descriptionValue);
-      }, 500);
-      return () => clearTimeout(handler);
-    } else {
-      setShowDescriptionSuggestions(false);
-    }
-  }, [form.watch('description'), handleSuggestionFetch]);
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'description' && value.description) {
+        const handler = setTimeout(() => {
+          handleSuggestionFetch('description', value.description!);
+        }, 500);
+        return () => clearTimeout(handler);
+      } else if (name === 'description' && !value.description) {
+        setShowDescriptionSuggestions(false);
+      }
 
-  useEffect(() => {
-    const docketValue = form.watch('docketNumber');
-    if (docketValue) {
-      const handler = setTimeout(() => {
-        handleSuggestionFetch('docket', docketValue);
-      }, 500);
-      return () => clearTimeout(handler);
-    } else {
-      setShowDocketSuggestions(false);
-    }
-  }, [form.watch('docketNumber'), handleSuggestionFetch]);
+      if (name === 'docketNumber' && value.docketNumber) {
+        const handler = setTimeout(() => {
+          handleSuggestionFetch('docket', value.docketNumber!);
+        }, 500);
+        return () => clearTimeout(handler);
+      } else if (name === 'docketNumber' && !value.docketNumber) {
+         setShowDocketSuggestions(false);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch, handleSuggestionFetch]);
 
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg bg-card">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-foreground">
+        <CardTitle className="text-2xl font-semibold gradient-text">
           {entryToEdit ? 'Edit Timeline Entry' : 'Add New Timeline Entry'}
         </CardTitle>
+        <CardDescription className="text-muted-foreground">
+            Fill in the details for your timeline. AI suggestions will appear as you type.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date" className="text-foreground">Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={'outline'}
                     className={cn(
-                      'w-full justify-start text-left font-normal mt-1',
+                      'w-full justify-start text-left font-normal mt-1 bg-background border-border text-foreground hover:bg-muted',
                       !form.watch('date') && 'text-muted-foreground'
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.watch('date') ? format(form.watch('date'), 'MM/dd/yyyy') : <span>Pick a date</span>}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-foreground" />
+                    {form.watch('date') ? format(form.watch('date'), 'MM/dd/yyyy') : <span className="text-muted-foreground">Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0 bg-popover border-border">
                   <Calendar
                     mode="single"
                     selected={form.watch('date')}
                     onSelect={(date) => form.setValue('date', date || new Date())}
                     initialFocus
+                    className="bg-popover text-popover-foreground"
+                     classNames={{
+                        day_selected: "bg-primary text-primary-foreground",
+                        day_today: "bg-accent text-accent-foreground",
+                     }}
                   />
                 </PopoverContent>
               </Popover>
@@ -211,19 +221,22 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
             </div>
 
             <div>
-              <Label htmlFor="user">User</Label>
-              <Input id="user" value="Logged-in User (Not implemented yet)" readOnly className="mt-1 bg-muted/50" /> {/* Placeholder */}
+              <Label htmlFor="user" className="text-foreground">User</Label>
+              <div className="relative mt-1">
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input id="user" value={userName} readOnly className="pl-10 bg-muted/50 border-border text-foreground" />
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="client">Client</Label>
+              <Label htmlFor="client" className="text-foreground">Client</Label>
               <Select onValueChange={(value) => form.setValue('client', value)} value={form.watch('client')}>
-                <SelectTrigger className="w-full mt-1">
-                  <SelectValue placeholder="Select a client" />
+                <SelectTrigger className="w-full mt-1 bg-background border-border text-foreground hover:bg-muted">
+                  <SelectValue placeholder={<span className="text-muted-foreground">Select a client</span>} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border text-popover-foreground">
                   {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
+                    <SelectItem key={client.id} value={client.id} className="hover:bg-muted focus:bg-muted">
                       {client.name}
                     </SelectItem>
                   ))}
@@ -233,14 +246,14 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
             </div>
 
             <div>
-              <Label htmlFor="task">Task</Label>
+              <Label htmlFor="task" className="text-foreground">Task</Label>
               <Select onValueChange={(value) => form.setValue('task', value)} value={form.watch('task')}>
-                <SelectTrigger className="w-full mt-1">
-                  <SelectValue placeholder="Select a task" />
+                <SelectTrigger className="w-full mt-1 bg-background border-border text-foreground hover:bg-muted">
+                  <SelectValue placeholder={<span className="text-muted-foreground">Select a task</span>}/>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border text-popover-foreground">
                   {tasks.map((task) => (
-                    <SelectItem key={task.id} value={task.id}>
+                    <SelectItem key={task.id} value={task.id} className="hover:bg-muted focus:bg-muted">
                       {task.name}
                     </SelectItem>
                   ))}
@@ -251,27 +264,28 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
           </div>
           
           <div className="relative">
-            <Label htmlFor="docketNumber">Our Docket #</Label>
+            <Label htmlFor="docketNumber" className="text-foreground">Our Docket #</Label>
             <div className="relative mt-1">
               <Input
                 id="docketNumber"
                 {...form.register('docketNumber')}
-                placeholder="Enter docket number"
+                placeholder="Enter docket number (min. 3 chars for AI)"
                 onFocus={() => docketSuggestions.length > 0 && setShowDocketSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowDocketSuggestions(false), 100)} 
+                onBlur={() => setTimeout(() => setShowDocketSuggestions(false), 150)} 
+                className="bg-background border-border text-foreground placeholder:text-muted-foreground"
               />
               {isSuggestionLoading && form.watch('docketNumber') && (
                 <Loader2 className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-muted-foreground" />
               )}
             </div>
             {showDocketSuggestions && docketSuggestions.length > 0 && (
-              <Card className="absolute z-10 mt-1 w-full shadow-lg max-h-40 overflow-y-auto">
+              <Card className="absolute z-10 mt-1 w-full shadow-lg max-h-40 overflow-y-auto bg-popover border-popover-foreground">
                 <CardContent className="p-2">
                   {docketSuggestions.map((s, i) => (
                     <div
                       key={i}
-                      className="p-2 hover:bg-muted rounded-md cursor-pointer text-sm"
-                      onClick={() => {
+                      className="p-2 hover:bg-muted rounded-md cursor-pointer text-sm text-popover-foreground"
+                      onMouseDown={() => { // Use onMouseDown to prevent onBlur from firing first
                         form.setValue('docketNumber', s);
                         setShowDocketSuggestions(false);
                       }}
@@ -285,28 +299,29 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
           </div>
 
           <div className="relative">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-foreground">Description</Label>
             <div className="relative mt-1">
             <Textarea
               id="description"
               {...form.register('description')}
-              placeholder="Describe the work done"
+              placeholder="Describe the work done (min. 3 chars for AI)"
               rows={3}
               onFocus={() => descriptionSuggestions.length > 0 && setShowDescriptionSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowDescriptionSuggestions(false), 100)}
+              onBlur={() => setTimeout(() => setShowDescriptionSuggestions(false), 150)}
+              className="bg-background border-border text-foreground placeholder:text-muted-foreground"
             />
             {isSuggestionLoading && form.watch('description') && (
                 <Loader2 className="absolute right-3 top-3 h-5 w-5 animate-spin text-muted-foreground" />
             )}
             </div>
             {showDescriptionSuggestions && descriptionSuggestions.length > 0 && (
-               <Card className="absolute z-10 mt-1 w-full shadow-lg max-h-48 overflow-y-auto">
+               <Card className="absolute z-10 mt-1 w-full shadow-lg max-h-48 overflow-y-auto bg-popover border-popover-foreground">
                 <CardContent className="p-2">
                   {descriptionSuggestions.map((s, i) => (
                     <div
                       key={i}
-                      className="p-2 hover:bg-muted rounded-md cursor-pointer text-sm"
-                      onClick={() => {
+                      className="p-2 hover:bg-muted rounded-md cursor-pointer text-sm text-popover-foreground"
+                      onMouseDown={() => { // Use onMouseDown to prevent onBlur from firing first
                         form.setValue('description', s);
                         setShowDescriptionSuggestions(false);
                       }}
@@ -321,12 +336,12 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
           </div>
 
           <div>
-            <Label htmlFor="timeSpent">Time Spent (HH:MM)</Label>
+            <Label htmlFor="timeSpent" className="text-foreground">Time Spent (HH:MM)</Label>
             <Input
               id="timeSpent"
               type="text" 
               placeholder="e.g., 02:30 for 2h 30m"
-              className="mt-1"
+              className="mt-1 bg-background border-border text-foreground placeholder:text-muted-foreground"
               {...form.register('timeSpent')}
             />
             {form.formState.errors.timeSpent && <p className="text-sm text-destructive mt-1">{form.formState.errors.timeSpent.message}</p>}
@@ -337,7 +352,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
               {entryToEdit ? 'Update Entry' : 'Add Entry'}
             </Button>
             {entryToEdit && onCancelEdit && (
-              <Button type="button" variant="outline" onClick={onCancelEdit} className="flex-grow-0">
+              <Button type="button" variant="outline" onClick={onCancelEdit} className="flex-grow-0 border-border text-foreground hover:bg-muted">
                 Cancel
               </Button>
             )}
@@ -347,4 +362,3 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
     </Card>
   );
 }
-

@@ -1,4 +1,4 @@
-import type { Client, Task } from '@/lib/types';
+import type { Client, Task, TimelineEntry } from '@/lib/types';
 
 export const MOCK_USER_NAME = "Rohit Singh";
 
@@ -70,4 +70,28 @@ export const tasks: Task[] = [
   { id: 'task-17', name: 'Legal' },
   { id: 'task-18', name: 'Courts' },
   { id: 'task-19', name: 'Firm - Internal' },
+];
+
+export let mockTimelineEntries: TimelineEntry[] = [
+  {
+    id: 'mock-entry-1',
+    date: new Date('2024-05-08T10:00:00.000Z'), // Use Date objects
+    userId: 'user123', // Consistent with simulated login
+    userName: 'user', // Consistent with simulated login username
+    client: 'client-28', // Oracle - Appli
+    task: 'task-1', // Specification Drafting
+    description: 'Drafted initial specification for new module for Oracle.',
+    timeSpent: '03:00',
+    docketNumber: 'ORCL-101-D',
+  },
+  {
+    id: 'mock-entry-2',
+    date: new Date('2024-05-09T14:30:00.000Z'), // Use Date objects
+    userId: 'user123',
+    userName: 'user',
+    client: 'client-24', // Nutanix - Appli
+    task: 'task-2', // USPTO - Preparation of responses
+    description: 'Prepared response to office action for Nutanix.',
+    timeSpent: '02:30',
+  }
 ];
