@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -11,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { TimelineEntry, Client, Task } from '@/lib/types';
+import type { TimelineEntry } from '@/lib/types';
 import { MOCK_USER_NAME, clients as mockClients, tasks as mockTasks } from '@/data/mockData'; // For mapping IDs to names
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,17 +31,18 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
 
   const formatData = (data: TimelineEntry[], formatType: ExportFormat): string => {
     const delimiter = formatType === 'csv' ? ',' : '\t';
-    const headers = ['Date', 'Client', 'Task', 'User Name', 'Docket #', 'Description', 'Time Spent'].join(delimiter);
+    const headers = ['Date', 'Type', 'Name', 'Client', 'Task', 'Our Docket #', 'Description', 'Time Spent'].join(delimiter);
     
     const rows = data.map(entry => [
-      format(new Date(entry.date), 'yyyy-MM-dd'),
-      getClientName(entry.client),
-      getTaskName(entry.task),
-      entry.userName,
-      entry.docketNumber || '',
+      format(new Date(entry.date), 'MM/dd/yyyy'), // Date format MM/dd/yyyy
+      'Time', // Hardcoded 'Type' as "Time"
+      entry.userName, // Name (User Name)
+      getClientName(entry.client), // Client
+      getTaskName(entry.task), // Task
+      entry.docketNumber || '', // Our Docket #
       // Ensure description is safe for CSV/TSV (e.g., escape quotes if CSV)
-      formatType === 'csv' ? `"${entry.description.replace(/"/g, '""')}"` : entry.description,
-      entry.timeSpent
+      formatType === 'csv' ? `"${entry.description.replace(/"/g, '""')}"` : entry.description, // Description
+      entry.timeSpent // Time Spent
     ].join(delimiter));
 
     return [headers, ...rows].join('\n');
@@ -106,3 +108,4 @@ export function ExportTimelineButton({ entries }: ExportTimelineButtonProps) {
     </div>
   );
 }
+
