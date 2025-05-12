@@ -43,13 +43,12 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
         
         // A day is missed if:
         // 1. It's a weekday.
-        // 2. It's strictly after the earliest entry date.
-        // 3. It's in the past or is today (but not in the future).
+        // 2. It's strictly after the earliest entry date. // Changed from on or after to strictly after
+        // 3. It's in the past (but not today or in the future).
         // 4. There is no timeline entry for that day.
         if (!isWeekend(currentDate) &&
-            isAfter(currentDate, earliestEntryDate) && 
-            (isPast(currentDate) || isToday(currentDate)) && // Ensures we only check up to today
-            currentDate <= today && // Double ensure not future, (isPast || isToday) should cover this
+            earliestEntryDate && isAfter(currentDate, earliestEntryDate) && // ensure earliestEntryDate is not null
+            isPast(currentDate) && !isToday(currentDate) && // ensure it's strictly in the past
             !daysWithEntries.some(entryDay => isSameDay(currentDate, entryDay))) {
           newMissedDays.push(currentDate);
         }
@@ -99,6 +98,8 @@ export function TimelineCalendarView({ entries }: TimelineCalendarViewProps) {
           captionLayout="dropdown-buttons"
           fromYear={new Date().getFullYear() - 5}
           toYear={new Date().getFullYear() + 5}
+          labelMonthDropdown=""
+          labelYearDropdown=""
         />
       </CardContent>
     </Card>

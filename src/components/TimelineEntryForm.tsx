@@ -252,7 +252,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
           </div>
           
           <div className="relative">
-            <Label htmlFor="docketNumber">Our Docket # (Optional)</Label>
+            <Label htmlFor="docketNumber">Our Docket #</Label>
             <div className="relative mt-1">
               <Input
                 id="docketNumber"
