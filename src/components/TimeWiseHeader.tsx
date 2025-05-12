@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 
 // Assuming timewise-logo.png is located at public/timewise-logo.png
@@ -5,8 +6,8 @@ import Image from 'next/image';
 
 export function TimeWiseHeader() {
   return (
-    <header className="shadow-md relative overflow-hidden">
-      {/* Moving clouds animation removed */}
+    <header className="shadow-md relative overflow-hidden bg-transparent">
+      {/* Moving clouds animation removed as per previous request, header background is transparent */}
       {/* 
       <div className="absolute inset-0 z-0 opacity-20">
         <div className="cloud absolute top-1/4 left-1/4 w-32 h-16 bg-white rounded-full animate-cloud-move-1"></div>
@@ -32,8 +33,8 @@ export function TimeWiseHeader() {
       `}</style>
       */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="flex h-24 items-center justify-center"> {/* Changed justify-between to justify-center */}
-          <div className="flex items-center"> {/* Removed mx-auto */}
+        <div className="flex h-24 items-center justify-center"> {/* justify-center to center the logo */}
+          <div className="flex items-center">
             {/* 
               The logo image 'timewise-logo.png' should be placed in the 'public' directory.
               The src prop should be the path relative to the public directory, e.g., /timewise-logo.png
@@ -41,7 +42,7 @@ export function TimeWiseHeader() {
             <Image
               src="https://iili.io/38aoDx9.png" // Path relative to public directory
               alt="TimeWise Logo"
-              width={200} // Adjusted width, can be fine-tuned
+              width={350} // Adjusted width as per request
               height={80} // Adjusted height, can be fine-tuned
               priority // Add priority if it's LCP
               data-ai-hint="logo abstract"
@@ -54,3 +55,4 @@ export function TimeWiseHeader() {
     </header>
   );
 }
+
