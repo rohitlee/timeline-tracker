@@ -142,7 +142,7 @@ export default function RegisterPage() {
         <CardContent className="mt-0 pb-6 pt-0 text-center">
           <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
-            <a href="/login" className="font-medium text-primary hover:underline">
+            <a href="/login" className="font-medium text-chart-2 hover:underline">
               Sign In
             </a>
           </p>
