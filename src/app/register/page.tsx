@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { register } from '@/lib/auth'; // To be updated to use Firebase
+// import { register } from '@/lib/auth'; // To be updated to use Firebase
+import { registerUserServerAction } from '@/lib/actions'; // Server action for Firebase registration
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
 
@@ -37,31 +38,39 @@ export default function RegisterPage() {
     },
   });
 
+  // In src/app/register/page.tsx
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    setGlobalError(null);
-    form.clearErrors();
-
-    const result = await register(data.email, data.password, data.username);
-    setIsLoading(false);
-
-    if (result?.success && result.user) {
-      toast({
-        title: 'Registration Successful',
-        description: `Welcome, ${result.user.username}! Redirecting to login...`,
-      });
-      // Redirect to home page after successful registration and auto-login
-      router.push('/');
-    } else {
-      const errorMessage = result?.message || 'Registration failed. Please try again.';
-      setGlobalError(errorMessage);
-      toast({
-        title: 'Registration Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    }
-  };
+    try {
+      // Call the server action for Firebase registration
+      const result = await registerUserServerAction(data.email, data.password, data.username);
+      
+      if (result.success) {
+        // Handle successful registration (e.g., show a success message, redirect)
+        toast({
+          title: 'Registration Successful!',
+          description: 'You have successfully registered.',
+        });
+        router.push('/login'); // Redirect to the login page
+        } else {
+          // Handle registration failure (e.g., show an error message)
+          toast({
+            title: 'Registration Failed.',
+            description: result.message || 'An unknown error occurred.',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        toast({
+          title: 'An error occurred.',
+          description: 'Please try again later.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 selection:bg-primary/20 selection:text-primary">

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { login } from '@/lib/auth'; // This will use the updated auth.ts
+import { loginUserServerAction } from '@/lib/actions'; // This will use the updated auth.ts
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck } from 'lucide-react';
 
@@ -40,23 +40,36 @@ export default function LoginPage() {
     setGlobalError(null);
     form.clearErrors();
 
-    const result = await login(data.email, data.password);
-    setIsLoading(false);
+    try {
+      // Call the server action for Firebase login
+      const result = await loginUserServerAction(data.email, data.password);
 
-    if (result?.success && result.user) {
+      if (result.success && result.user) {
+        // Handle successful login (e.g., show a success message, redirect)
+        toast({
+          title: 'Login Successful!',
+          description: `Welcome back, ${result.user.username}!`,
+        });
+        router.push('/'); // Redirect to the home page or dashboard
+      } else {
+        // Handle login failure (e.g., show an error message)
+        setGlobalError(result.message || 'Login failed. Please try again.');
+        toast({
+          title: 'Login Failed.',
+          description: result.message || 'An unknown error occurred.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setGlobalError('An error occurred during login. Please try again.');
       toast({
-        title: 'Login Successful',
-        description: `Welcome back, ${result.user.username}! Redirecting...`,
-      });
-      router.push('/'); // Redirect to homepage
-    } else {
-      const errorMessage = result?.message || 'Invalid email or password. Please try again.';
-      setGlobalError(errorMessage);
-      toast({
-        title: 'Login Failed',
-        description: errorMessage,
+        title: 'An error occurred.',
+        description: 'Please try again later.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
