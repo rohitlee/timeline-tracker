@@ -49,6 +49,7 @@ export const clients: Client[] = [
   { id: 'client-43', name: 'WBD' },
   { id: 'client-44', name: 'WDC - Searches' },
   { id: 'client-45', name: 'WILM' },
+  { id: 'client-46', name: 'FOLY - Searches' },
 ];
 
 export const tasks: Task[] = [

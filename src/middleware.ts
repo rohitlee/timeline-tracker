@@ -7,9 +7,9 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow access to login and register pages regardless of auth state
-  if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
-    return NextResponse.next();
-  }
+//  if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
+//    return NextResponse.next();
+//  }
 
   // If trying to access other pages and not authenticated, redirect to login
   if (!currentUserCookie) {

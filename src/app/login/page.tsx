@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -10,9 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { loginUserServerAction } from '@/lib/actions'; // This will use the updated auth.ts
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck } from 'lucide-react';
+
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Firebase SDK
+import { auth as firebaseAuth, db } from '@/lib/firebase';   // Your Firebase app instance
+import Cookies from 'js-cookie';                            // For setting the custom cookie
+import { doc, getDoc } from 'firebase/firestore';           // For fetching username
 
 const loginFormSchema = z.object({
   email: z.string().email('Invalid email address.'),
@@ -20,6 +23,12 @@ const loginFormSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
+
+interface UserCookieData { // Keep this consistent with your types
+  uid: string;
+  email: string;
+  username: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,31 +50,50 @@ export default function LoginPage() {
     form.clearErrors();
 
     try {
-      // Call the server action for Firebase login
-      const result = await loginUserServerAction(data.email, data.password);
+      // Call Firebase signInWithEmailAndPassword directly on the client
+      const userCredential = await signInWithEmailAndPassword(firebaseAuth, data.email, data.password);
+      const user = userCredential.user;
 
-      if (result.success && result.user) {
-        // Handle successful login (e.g., show a success message, redirect)
+      if (user) {
+        // Fetch username from Firestore to include in the cookie and for welcome message
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        let username = data.email; // Default to email
+        if (userDocSnap.exists()) {
+          username = userDocSnap.data()?.username || data.email;
+        }
+
+        // Set your custom cookie for server actions/middleware if needed
+        const userCookieData: UserCookieData = { uid: user.uid, email: user.email!, username };
+        Cookies.set('user', JSON.stringify(userCookieData), { expires: 7, path: '/' });
+
         toast({
           title: 'Login Successful!',
-          description: `Welcome back, ${result.user.username}!`,
+          description: `Welcome back, ${username}!`,
         });
-        router.push('/'); // Redirect to the home page or dashboard
+        console.log('[Login Page] Client-side login successful, redirecting to /');
+        router.push('/');
       } else {
-        // Handle login failure (e.g., show an error message)
-        setGlobalError(result.message || 'Login failed. Please try again.');
+        // This case should ideally not be reached if signInWithEmailAndPassword throws an error for failures
+        setGlobalError('Login failed. Please try again.');
         toast({
           title: 'Login Failed.',
-          description: result.message || 'An unknown error occurred.',
+          description: 'An unknown error occurred.',
           variant: 'destructive',
         });
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setGlobalError('An error occurred during login. Please try again.');
+    } catch (error: any) {
+      console.error('Firebase login error (client-side):', error.code, error.message);
+      let friendlyMessage = 'Login failed. Please check your credentials.';
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        friendlyMessage = 'Invalid email or password.';
+      } else if (error.code === 'auth/too-many-requests') {
+        friendlyMessage = 'Too many login attempts. Please try again later.';
+      }
+      setGlobalError(friendlyMessage);
       toast({
-        title: 'An error occurred.',
-        description: 'Please try again later.',
+        title: 'Login Failed.',
+        description: friendlyMessage,
         variant: 'destructive',
       });
     } finally {
@@ -151,4 +179,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
