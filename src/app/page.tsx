@@ -41,23 +41,13 @@ export default function HomePage() {
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState<Date>(() => new Date());
   const { toast } = useToast();
 
-  console.log('[HomePage] Component rendering. isMounted:', isMounted, 'userProfile:', userProfile ? userProfile.uid : 'null');
-
   useEffect(() => {
-    console.log('[HomePage] Auth useEffect running.');
-    setIsMounted(true); // Set mounted early
+    setIsMounted(true);
 
-    // Check initial currentUser state synchronously; Firebase might have it ready
     const initialFbUser = firebaseAuth.currentUser;
-    console.log('[HomePage] Initial firebaseAuth.currentUser (at time of effect run):', initialFbUser ? initialFbUser.uid : 'null');
 
-    console.log('[HomePage] Subscribing to onAuthStateChanged.');
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser: FirebaseUser | null) => {
-      console.log('[HomePage] onAuthStateChanged Fired! fbUser from listener:', fbUser ? fbUser.uid : 'null');
-
       if (fbUser) {
-        // User is authenticated according to the listener
-        console.log('[HomePage] fbUser detected by listener. UID:', fbUser.uid);
         const userDocRef = doc(db, 'users', fbUser.uid);
         try {
           const userDocSnap = await getDoc(userDocRef);
@@ -65,93 +55,65 @@ export default function HomePage() {
             const profileData = userDocSnap.data();
             const newUserProfile: UserProfile = {
               uid: fbUser.uid,
-              email: fbUser.email, // fbUser.email should be non-null if fbUser is not null
+              email: fbUser.email,
               username: profileData.username || fbUser.email || 'User',
             };
-            console.log('[HomePage] Setting userProfile from listener:', newUserProfile);
-            setUserProfile(newUserProfile); // This will trigger the other useEffect to fetch entries
+            setUserProfile(newUserProfile);
           } else {
-            console.warn(`[HomePage] User profile NOT found in Firestore (listener) for UID: ${fbUser.uid}.`);
             const fallbackProfile: UserProfile = {
               uid: fbUser.uid,
               email: fbUser.email,
               username: fbUser.email || 'User',
             };
-            console.log('[HomePage] Setting userProfile to fallback (listener):', fallbackProfile);
             setUserProfile(fallbackProfile);
           }
         } catch (error) {
-            console.error("[HomePage] Error fetching user document (listener):", error);
-            const errorProfile: UserProfile = { // Provide a basic profile to prevent total app breakage
-              uid: fbUser.uid,
-              email: fbUser.email,
-              username: fbUser.email || 'ErrorUser',
-            };
-            setUserProfile(errorProfile);
+          const errorProfile: UserProfile = {
+            uid: fbUser.uid,
+            email: fbUser.email,
+            username: fbUser.email || 'ErrorUser',
+          };
+          setUserProfile(errorProfile);
         }
       } else {
-        // No user from listener (fbUser is null)
-        // This means Firebase has confirmed no active session or a logout occurred.
-        console.log('[HomePage] No fbUser from listener. User is signed out or session expired.');
-        // Only redirect if we are not already in a state of having no user,
-        // or if initialFbUser was also null (meaning it's not just a pending state).
-        // This logic helps prevent redirect loops if onAuthStateChanged fires multiple times with null initially.
-        if (userProfile !== null || initialFbUser === null) { // If userProfile was set OR initial check was also null
-          console.log('[HomePage] -> Conditions met for resetting state and redirecting to login. Current userProfile:', userProfile ? userProfile.uid : 'null', 'InitialFbUser:', initialFbUser ? initialFbUser.uid : 'null' );
+        if (userProfile !== null || initialFbUser === null) {
           setUserProfile(null);
-          setEntries([]); // Clear entries
-          // Check current path before pushing to avoid redundant navigation or errors if already unmounting/navigating
-          // Note: router.pathname might not be available in App Router's useRouter directly.
-          // For simplicity, we assume redirection is generally safe if conditions are met.
-          // A more robust check might involve window.location.pathname if really needed, but often not.
+          setEntries([]);
           router.push('/login');
-        } else {
-          console.log('[HomePage] -> No fbUser from listener, but userProfile is already null and initialFbUser was (likely) not null. Waiting for auth state to settle or already handled.');
         }
       }
     });
 
     return () => {
-      console.log('[HomePage] Auth useEffect cleanup - Unsubscribing from onAuthStateChanged.');
       unsubscribe();
     };
-  }, [router]); // Dependency: router (for router.push).
+  }, [router]);
 
   const fetchEntries = useCallback(async () => {
-    // No need to check userProfile here, the calling useEffect does it.
-    console.log('[HomePage] fetchEntries called. isLoadingEntries currently:', isLoadingEntries);
     setIsLoadingEntries(true);
     try {
       const userEntries = await getTimelineEntriesAction();
-      console.log('[HomePage] fetchEntries - got entries from action:', userEntries ? userEntries.length : 'undefined/error');
-      if (userEntries) { // Check if userEntries is not undefined (e.g. if action failed gracefully)
+      if (userEntries) {
         const parsedEntries = userEntries.map((entry: any) => ({
           ...entry,
           date: new Date(entry.date),
         }));
         setEntries(parsedEntries);
       } else {
-        setEntries([]); // Set to empty if action returned undefined/null
+        setEntries([]);
       }
     } catch (error) {
-        console.error("[HomePage] Error in fetchEntries (try-catch):", error);
-        setEntries([]); // Clear entries on error
+      setEntries([]);
     } finally {
-        setIsLoadingEntries(false);
-        console.log('[HomePage] fetchEntries - finished. setIsLoadingEntries to false.');
+      setIsLoadingEntries(false);
     }
-  }, []); // This useCallback has no external dependencies changing its definition.
+  }, []);
 
   useEffect(() => {
-    console.log('[HomePage] userProfile/fetchEntries useEffect triggered. userProfile:', userProfile ? userProfile.uid : 'null');
     if (userProfile) {
-      console.log('[HomePage] userProfile is present, calling fetchEntries.');
       fetchEntries();
-    } else {
-      console.log('[HomePage] userProfile is null, not calling fetchEntries (in userProfile effect).');
     }
   }, [userProfile, fetchEntries]);
-
 
   const handleSaveEntry = async (entryData: Omit<TimelineEntry, 'id' | 'userId' | 'userName'>) => {
     if (!userProfile) {
@@ -218,7 +180,6 @@ export default function HomePage() {
   const getTaskName = (taskId: string) => mockTasks.find(t => t.id === taskId)?.name || taskId;
 
   if (!isMounted || !userProfile) {
-    console.log('[HomePage] RENDERING LOADING SCREEN. isMounted:', isMounted, 'userProfile:', userProfile ? userProfile.uid : 'null');
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -226,7 +187,6 @@ export default function HomePage() {
       </div>
     );
   }
-  console.log('[HomePage] RENDERING MAIN CONTENT. userProfile UID:', userProfile.uid);
 
   const filteredPastEntries = entries.filter(e => !entryToEdit || e.id !== entryToEdit.id);
 

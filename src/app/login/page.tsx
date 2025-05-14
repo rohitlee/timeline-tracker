@@ -102,7 +102,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 selection:bg-primary/20 selection:text-primary">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[url('/clouds.jpg')] bg-cover bg-center">
       <Card className="w-full max-w-md shadow-2xl bg-card rounded-xl">
         <CardHeader className="text-center space-y-2">
           <ShieldCheck className="mx-auto h-12 w-12 text-primary" />
@@ -167,9 +167,6 @@ export default function LoginPage() {
              <a href="/register" className="font-medium text-chart-2 hover:underline">
                Register
              </a>
-           </p>
-           <p className="text-xs text-muted-foreground mt-2">
-             Hint: Use email <code className="bg-muted px-1 py-0.5 rounded-sm">user@example.com</code> and password <code className="bg-muted px-1 py-0.5 rounded-sm">password</code> for a pre-existing test user (if seeded).
            </p>
         </CardContent>
       </Card>
