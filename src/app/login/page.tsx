@@ -106,7 +106,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl bg-card rounded-xl">
         <CardHeader className="text-center space-y-2">
           <ShieldCheck className="mx-auto h-12 w-12 text-primary" />
-          <CardTitle className="text-3xl font-bold gradient-text tracking-wide">
+          <CardTitle className="text-3xl font-bold text-accent tracking-wide">
             Secure Sign In
           </CardTitle>
           <CardDescription className="text-muted-foreground">

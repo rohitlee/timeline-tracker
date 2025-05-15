@@ -1,3 +1,4 @@
+// src/app/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import { TimeWiseHeader } from '@/components/TimeWiseHeader';
 import { TimelineEntryForm } from '@/components/TimelineEntryForm';
 import { TimelineCalendarView } from '@/components/TimelineCalendarView';
 import { ExportTimelineButton } from '@/components/ExportTimelineButton';
-import type { TimelineEntry, UserProfile } from '@/lib/types'; // Ensure UserProfile is imported
+import type { TimelineEntry, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -25,10 +26,33 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { getTimelineEntriesAction, createTimelineEntryAction, deleteTimelineEntryAction } from '@/lib/actions';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth'; // Firebase SDK
-import { auth as firebaseAuth, db } from '@/lib/firebase'; // Firebase SDK instances
-import { doc, getDoc } from 'firebase/firestore'; // Firestore SDK
+
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth as firebaseAuth, db } from '@/lib/firebase';
+import {
+  collection,
+  addDoc,
+  updateDoc, // Import updateDoc
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  orderBy,
+  Timestamp,
+  getDoc
+} from 'firebase/firestore';
+import { z } from 'zod';
+
+const formSchema = z.object({
+  date: z.date({ required_error: 'Date is required.' }),
+  client: z.string().min(1, 'Client is required.'),
+  task: z.string().min(1, 'Task is required.'),
+  docketNumber: z.string().optional(),
+  description: z.string().min(1, 'Description is required.'),
+  timeSpent: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM). Example: 01:30 for 1 hour 30 mins.'),
+});
+type TimelineFormValues = z.infer<typeof formSchema>;
+
 
 export default function HomePage() {
   const router = useRouter();
@@ -36,14 +60,14 @@ export default function HomePage() {
   const [isLoadingEntries, setIsLoadingEntries] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | null>(null);
+  const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | null>(null); // This holds the full entry being edited, including its ID
   const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState<Date>(() => new Date());
   const { toast } = useToast();
 
+  // ... (useEffect for onAuthStateChanged - no changes here) ...
   useEffect(() => {
     setIsMounted(true);
-
     const initialFbUser = firebaseAuth.currentUser;
 
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser: FirebaseUser | null) => {
@@ -53,99 +77,155 @@ export default function HomePage() {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const profileData = userDocSnap.data();
-            const newUserProfile: UserProfile = {
+            setUserProfile({
               uid: fbUser.uid,
               email: fbUser.email,
               username: profileData.username || fbUser.email || 'User',
-            };
-            setUserProfile(newUserProfile);
+            });
           } else {
-            const fallbackProfile: UserProfile = {
+            setUserProfile({
               uid: fbUser.uid,
               email: fbUser.email,
               username: fbUser.email || 'User',
-            };
-            setUserProfile(fallbackProfile);
+            });
           }
         } catch (error) {
-          const errorProfile: UserProfile = {
+          console.error("Error fetching user profile:", error);
+          setUserProfile({ 
             uid: fbUser.uid,
             email: fbUser.email,
             username: fbUser.email || 'ErrorUser',
-          };
-          setUserProfile(errorProfile);
+          });
         }
       } else {
         if (userProfile !== null || initialFbUser === null) {
-          setUserProfile(null);
-          setEntries([]);
-          router.push('/login');
+            setUserProfile(null);
+            setEntries([]); 
+            router.push('/login');
         }
       }
     });
-
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [router]);
 
-  const fetchEntries = useCallback(async () => {
+
+  const fetchEntriesClientSide = useCallback(async () => {
+    if (!firebaseAuth.currentUser) {
+      setEntries([]); 
+      setIsLoadingEntries(false);
+      return;
+    }
     setIsLoadingEntries(true);
     try {
-      const userEntries = await getTimelineEntriesAction();
-      if (userEntries) {
-        const parsedEntries = userEntries.map((entry: any) => ({
-          ...entry,
-          date: new Date(entry.date),
-        }));
-        setEntries(parsedEntries);
-      } else {
-        setEntries([]);
-      }
+      const q = query(
+        collection(db, `users/${firebaseAuth.currentUser.uid}/timelineEntries`),
+        orderBy('date', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const fetchedEntries = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+        date: (docSnap.data().date as Timestamp).toDate(),
+      })) as TimelineEntry[];
+      setEntries(fetchedEntries);
     } catch (error) {
+      console.error("Error fetching timeline entries client-side:", error);
+      toast({
+        title: "Error Fetching Entries",
+        description: "Could not load your timeline entries.",
+        variant: "destructive",
+      });
       setEntries([]);
     } finally {
       setIsLoadingEntries(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
-    if (userProfile) {
-      fetchEntries();
+    if (userProfile && firebaseAuth.currentUser) {
+      fetchEntriesClientSide();
+    } else if (!firebaseAuth.currentUser && isMounted) {
+        setEntries([]);
+        setIsLoadingEntries(false);
     }
-  }, [userProfile, fetchEntries]);
+  }, [userProfile, fetchEntriesClientSide, isMounted]);
 
-  const handleSaveEntry = async (entryData: Omit<TimelineEntry, 'id' | 'userId' | 'userName'>) => {
-    if (!userProfile) {
+
+  const handleSaveEntry = async (entryDataFromForm: TimelineFormValues) => {
+    if (!firebaseAuth.currentUser || !userProfile) {
       toast({ title: "Error", description: "User not authenticated.", variant: "destructive" });
       return;
     }
 
-    const dataToSave = { ...entryData, date: new Date(entryData.date) };
-    const { client, task, docketNumber, description, timeSpent, date } = dataToSave;
-    const payloadForCreate = { client, task, docketNumber, description, timeSpent, date };
+    const validation = formSchema.safeParse(entryDataFromForm);
+    if (!validation.success) {
+        toast({ title: "Invalid Data", description: validation.error.errors.map(e => e.message).join(', '), variant: "destructive" });
+        return;
+    }
+    const validatedData = validation.data;
 
-    const result = await createTimelineEntryAction(payloadForCreate);
+    // Prepare the data structure for Firestore. This is common for both add and update.
+    const dataToSaveForFirestore = {
+      ...validatedData,
+      // userId and userName are already part of the entry if editing, or added if new
+      // For update, we don't need to re-set userId or userName if they are unchanged
+      // but it's harmless to include them if they are part of validatedData implicitly or explicitly
+      date: Timestamp.fromDate(validatedData.date), // Convert JS Date to Firestore Timestamp
+    };
 
-    if (result.success && result.entry) {
-      fetchEntries();
-      setEntryToEdit(null);
-      toast({
-        title: entryToEdit ? "Entry Updated (Simulated)" : "Entry Added",
-        description: `Your timeline entry has been successfully ${entryToEdit ? 'updated (simulated)' : 'added'}.`,
-      });
-    } else {
+
+    try {
+      if (entryToEdit && entryToEdit.id) {
+        // ----- UPDATE Existing Entry -----
+        const entryDocRef = doc(db, `users/${firebaseAuth.currentUser.uid}/timelineEntries`, entryToEdit.id);
+        // Only update the fields that came from the form. userId and userName remain from original entry.
+        await updateDoc(entryDocRef, {
+            ...dataToSaveForFirestore // This includes date, client, task, docketNumber, description, timeSpent
+        });
+        toast({
+          title: "Entry Updated",
+          description: "Your timeline entry has been successfully updated.",
+        });
+      } else {
+        // ----- ADD New Entry -----
+        const entryForCreation: Omit<TimelineEntry, 'id'> = {
+          ...validatedData, // Contains date, client, task, docketNumber, description, timeSpent
+          userId: firebaseAuth.currentUser.uid,
+          userName: userProfile.username,
+          date: Timestamp.fromDate(validatedData.date),
+        };
+        await addDoc(
+          collection(db, `users/${firebaseAuth.currentUser.uid}/timelineEntries`),
+          entryForCreation
+        );
+        toast({
+          title: "Entry Added",
+          description: "Your timeline entry has been successfully added.",
+        });
+      }
+      
+      fetchEntriesClientSide(); // Re-fetch entries to show the new/updated one
+      setEntryToEdit(null); // Clear edit state in both cases
+
+    } catch (error) {
+      console.error("Error saving timeline entry client-side:", error);
       toast({
         title: "Save Failed",
-        description: result.message || "Could not save the entry.",
+        description: `Could not ${entryToEdit ? 'update' : 'add'} the entry. Check console for details.`,
         variant: "destructive",
       });
     }
   };
 
   const handleEditRequest = (entry: TimelineEntry) => {
+    // When requesting an edit, store the full entry object, including its ID.
+    // Ensure the date is a JS Date object for the form.
     setEntryToEdit({ ...entry, date: new Date(entry.date) });
   };
+
+  // ... (handleCancelEdit, requestDelete, confirmDelete, cancelDelete, getClientName, getTaskName, loader, JSX return) ...
+  // No changes needed for the rest of the component for this specific update logic.
+  // The existing handleCancelEdit, requestDelete, etc., should continue to work.
 
   const handleCancelEdit = () => {
     setEntryToEdit(null);
@@ -156,19 +236,25 @@ export default function HomePage() {
   };
 
   const confirmDelete = async () => {
-    if (deleteCandidateId) {
-      const result = await deleteTimelineEntryAction(deleteCandidateId);
-      if (result.success) {
-        fetchEntries();
-        setDeleteCandidateId(null);
-        toast({ title: "Entry Deleted", description: "The timeline entry has been deleted." });
-      } else {
-        toast({
-          title: "Delete Failed",
-          description: result.message || "Could not delete the entry.",
-          variant: "destructive",
-        });
-      }
+    if (!firebaseAuth.currentUser || !deleteCandidateId) {
+      toast({ title: "Error", description: "Cannot delete entry.", variant: "destructive" });
+      setDeleteCandidateId(null);
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, `users/${firebaseAuth.currentUser.uid}/timelineEntries`, deleteCandidateId));
+      fetchEntriesClientSide(); 
+      setDeleteCandidateId(null);
+      toast({ title: "Entry Deleted", description: "The timeline entry has been deleted." });
+    } catch (error) {
+      console.error("Error deleting timeline entry client-side:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Could not delete the entry.",
+        variant: "destructive",
+      });
+      setDeleteCandidateId(null);
     }
   };
 
@@ -179,7 +265,7 @@ export default function HomePage() {
   const getClientName = (clientId: string) => mockClients.find(c => c.id === clientId)?.name || clientId;
   const getTaskName = (taskId: string) => mockTasks.find(t => t.id === taskId)?.name || taskId;
 
-  if (!isMounted || !userProfile) {
+  if (!isMounted || !userProfile) { 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -187,7 +273,7 @@ export default function HomePage() {
       </div>
     );
   }
-
+  
   const filteredPastEntries = entries.filter(e => !entryToEdit || e.id !== entryToEdit.id);
 
   return (
@@ -197,7 +283,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
             <TimelineEntryForm
-              onSaveEntry={handleSaveEntry}
+              onSaveEntry={handleSaveEntry} 
               pastEntries={filteredPastEntries}
               entryToEdit={entryToEdit}
               onCancelEdit={handleCancelEdit}
@@ -214,7 +300,7 @@ export default function HomePage() {
             />
             <Card className="shadow-lg bg-card">
               <CardHeader>
-                <CardTitle className="text-xl font-semibold gradient-text">Recent Entries</CardTitle>
+                <CardTitle className="text-xl font-semibold text-accent">Recent Entries</CardTitle>
                 <CardDescription className="text-muted-foreground">Your last 5 timeline entries. You can edit or delete them.</CardDescription>
               </CardHeader>
               <CardContent>

@@ -1,4 +1,3 @@
-
 // src/components/TimelineCalendarView.tsx
 'use client';
 
@@ -95,7 +94,7 @@ export function TimelineCalendarView({ entries, onMonthChange, currentMonth }: T
   return (
     <Card className="shadow-lg w-full"> {/* Added w-full */}
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-foreground gradient-text">Timeline Overview</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-accent">Timeline Overview</CardTitle>
         <CardDescription className="text-muted-foreground">Calendar view of your timeline entries. Days with entries are highlighted. Missed workdays are flagged.</CardDescription>
       </CardHeader>
       <CardContent className="flex justify-center p-0 sm:p-2 md:p-4"> {/* Centered calendar and adjusted padding */}
@@ -107,7 +106,7 @@ export function TimelineCalendarView({ entries, onMonthChange, currentMonth }: T
           modifiersStyles={modifierStyles}
           className="rounded-md border-0 p-0 sm:p-2 md:p-4 max-w-full sm:max-w-md md:max-w-lg" // Adjusted padding, removed border, set max-width for responsiveness
           classNames={{
-            caption_label: "text-lg font-medium gradient-text", // Larger text for month/year
+            caption_label: "text-lg font-medium text-accent", // Larger text for month/year, using accent color
             nav_button: "h-8 w-8 rounded-full bg-transparent hover:bg-muted border-0", // Round nav buttons, no border
             day: cn(
               "h-10 w-10 p-0 font-normal aria-selected:opacity-100 rounded-full", // Default day button styling

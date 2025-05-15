@@ -1,4 +1,4 @@
-
+// src/components/TimelineEntryForm.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -46,15 +46,11 @@ const formSchema = z.object({
 type TimelineFormValues = z.infer<typeof formSchema>;
 
 interface TimelineEntryFormProps {
-  // onSaveEntry expects data that matches TimelineFormValues, 
-  // as it's the direct output of the form, already validated.
-  // The parent component (HomePage) will then transform this into a full TimelineEntry 
-  // (adding id, userId, userName) before calling the server action.
   onSaveEntry: (entryData: TimelineFormValues) => void; 
-  pastEntries: TimelineEntry[]; // For AI suggestions
-  entryToEdit?: TimelineEntry | null; // Full TimelineEntry for editing
+  pastEntries: TimelineEntry[]; 
+  entryToEdit?: TimelineEntry | null; 
   onCancelEdit?: () => void;
-  userName: string; // Authenticated user's name
+  userName: string; 
 }
 
 export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCancelEdit, userName }: TimelineEntryFormProps) {
@@ -88,7 +84,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
   useEffect(() => {
     if (entryToEdit) {
       form.reset({
-        date: new Date(entryToEdit.date), // Ensure date is JS Date
+        date: new Date(entryToEdit.date), 
         client: entryToEdit.client,
         task: entryToEdit.task,
         docketNumber: entryToEdit.docketNumber || '',
@@ -96,7 +92,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
         timeSpent: entryToEdit.timeSpent,
       });
     } else {
-      form.reset({ // Default values for new entry
+      form.reset({ 
         date: new Date(),
         client: '',
         task: '',
@@ -109,11 +105,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
 
 
   const onSubmit = (values: TimelineFormValues) => {
-    // `values` already has `date` as a Date object due to react-hook-form and Zod transform.
-    // Pass these validated form values to the parent.
     onSaveEntry(values); 
-    // Resetting form to default for new entry, or clearing edit state, is handled by useEffect above
-    // or by the parent component by clearing `entryToEdit`.
   };
   
   const handleSuggestionFetch = useCallback(async (fieldType: 'docket' | 'description', currentValue: string) => {
@@ -124,7 +116,6 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
     }
 
     setIsSuggestionLoading(true);
-    // Ensure pastEntries dates are strings if the AI expects that. Here, using description and docket.
     const stringPastEntries = pastEntries.map(e => `${e.description} (Client: ${e.client}, Task: ${e.task}, Docket: ${e.docketNumber || 'N/A'})`);
     
     try {
@@ -179,7 +170,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
   return (
     <Card className="shadow-lg bg-card">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold gradient-text">
+        <CardTitle className="text-2xl font-semibold text-accent">
           {entryToEdit ? 'Edit Timeline Entry' : 'Add New Timeline Entry'}
         </CardTitle>
         <CardDescription className="text-muted-foreground">
@@ -208,7 +199,7 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
                   <Calendar
                     mode="single"
                     selected={form.watch('date')}
-                    onSelect={(date) => form.setValue('date', date || new Date())} // RHF handles Date object
+                    onSelect={(date) => form.setValue('date', date || new Date())} 
                     initialFocus
                     className="bg-popover text-popover-foreground"
                      classNames={{
@@ -237,7 +228,11 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border text-popover-foreground">
                   {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id} className="hover:bg-muted focus:bg-muted">
+                    <SelectItem 
+                      key={client.id} 
+                      value={client.id} 
+                      className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                    >
                       {client.name}
                     </SelectItem>
                   ))}
@@ -254,7 +249,11 @@ export function TimelineEntryForm({ onSaveEntry, pastEntries, entryToEdit, onCan
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border text-popover-foreground">
                   {tasks.map((task) => (
-                    <SelectItem key={task.id} value={task.id} className="hover:bg-muted focus:bg-muted">
+                    <SelectItem 
+                      key={task.id} 
+                      value={task.id} 
+                      className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                    >
                       {task.name}
                     </SelectItem>
                   ))}

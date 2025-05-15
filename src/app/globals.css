@@ -3,55 +3,50 @@
 @tailwind utilities;
 
 body {
-  font-family: var(--font-montserrat), Arial, Helvetica, sans-serif; /* Updated font */
-  letter-spacing: calc(0.12em); /* Added letter-spacing */
+  /* font-family is now primarily set via Tailwind's font-sans utility (Geist Sans from layout.tsx) */
+  /* letter-spacing: calc(0.12em);  Existing letter-spacing, kept as is */
 }
 
-.gradient-text {
-  background: -webkit-linear-gradient(320deg, hsl(var(--chart-1)) 0%, hsl(var(--chart-2)) 33%, hsl(var(--chart-3)) 66%, hsl(var(--chart-4)) 87%, hsl(var(--chart-5)) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* .gradient-text class removed */
 
 
 @layer base {
   :root {
-    --background: 220 15% 96%; /* Neutral Gray #F5F5F5 (slightly bluish) */
-    --foreground: 220 10% 15%; /* Dark gray text */
+    --background: 220 15% 96%; 
+    --foreground: 220 10% 15%; 
 
-    --card: 0 0% 100%; /* White */
+    --card: 0 0% 100%; 
     --card-foreground: 220 10% 15%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 15%;
 
-    --primary: 190 75% 92.9%; /* Light Blue #E0F7FA */
-    --primary-foreground: 190 60% 25%; /* Dark teal/blue for text on light blue */
+    --primary: 190 75% 92.9%; 
+    --primary-foreground: 190 60% 25%; 
 
-    --secondary: 210 20% 90%; /* A lighter, less saturated gray */
+    --secondary: 210 20% 90%; 
     --secondary-foreground: 210 10% 30%;
 
-    --muted: 210 20% 94%; /* Very light gray for muted backgrounds */
-    --muted-foreground: 210 10% 45%; /* Muted text */
+    --muted: 210 20% 94%; 
+    --muted-foreground: 210 10% 45%; 
 
-    --accent: 0 0% 0%; /* Black */
-    --accent-foreground: 0 0% 100%; /* White text for on Black */
+    --accent: 231 48% 48%; /* Indigo 500-ish: #3F51B5 */
+    --accent-foreground: 0 0% 100%; 
 
-    --destructive: 0 72% 51%; /* A standard red */
+    --destructive: 0 72% 51%; 
     --destructive-foreground: 0 0% 100%;
 
     --border: 210 15% 88%;
     --input: 210 15% 88%;
-    --ring: 180 100% 30.1%; /* Teal, slightly lighter for focus - kept for visibility on black accent */
+    --ring: 231 48% 55%; /* Lighter Indigo for focus rings */
 
     --radius: 0.5rem;
 
-    --chart-1: 276 75% 45%; /* capra-ramp-1 purple */
-    --chart-2: 215 80% 55%; /* capra-ramp-2 blue */
-    --chart-3: 185 70% 50%; /* capra-ramp-3 cyan */
-    --chart-4: 50 85% 60%;  /* capra-ramp-4 yellow */
-    --chart-5: 15 90% 65%;  /* capra-ramp-5 orange */
-
+    --chart-1: 276 75% 45%;
+    --chart-2: 215 80% 55%;
+    --chart-3: 185 70% 50%;
+    --chart-4: 50 85% 60%;
+    --chart-5: 15 90% 65%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -64,48 +59,48 @@ body {
   }
 
   .dark {
-    --background: 220 10% 5%; /* Darker background */
-    --foreground: 210 20% 95%; /* Lighter foreground */
+    --background: 220 10% 5%;
+    --foreground: 210 20% 95%;
 
-    --card: 220 10% 10%; /* Darker card */
+    --card: 220 10% 10%;
     --card-foreground: 210 20% 95%;
 
-    --popover: 220 10% 10%; /* Darker popover */
+    --popover: 220 10% 10%;
     --popover-foreground: 210 20% 95%;
 
-    --primary: 180 100% 35%; /* Brighter Teal for dark mode primary */
-    --primary-foreground: 0 0% 100%; /* White text on Teal */
+    --primary: 231 55% 65%; 
+    --primary-foreground: 0 0% 100%; 
 
-    --secondary: 210 15% 15%; /* Darker secondary */
+    --secondary: 210 15% 15%;
     --secondary-foreground: 210 20% 85%;
 
-    --muted: 210 15% 18%; /* Darker muted */
+    --muted: 210 15% 18%;
     --muted-foreground: 210 10% 60%;
 
-    --accent: 0 0% 0%; /* Black */
-    --accent-foreground: 0 0% 100%; /* White text for on Black */
+    --accent: 231 55% 60%; 
+    --accent-foreground: 0 0% 100%; 
 
-    --destructive: 0 60% 45%; /* Slightly desaturated red for dark mode */
+    --destructive: 0 60% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 210 15% 20%; /* Darker border */
-    --input: 210 15% 15%; /* Darker input background */
-    --ring: 180 100% 35.1%; /* Teal based - kept for visibility on black accent */
+    --border: 210 15% 20%;
+    --input: 210 15% 15%;
+    --ring: 231 60% 70%; 
 
-    --chart-1: 276 80% 65%; /* Lighter purple for dark */
-    --chart-2: 215 85% 70%; /* Lighter blue for dark */
-    --chart-3: 185 75% 60%; /* Lighter cyan for dark */
-    --chart-4: 50 90% 70%;  /* Lighter yellow for dark */
-    --chart-5: 15 95% 75%;  /* Lighter orange for dark */
+    --chart-1: 276 80% 65%;
+    --chart-2: 215 85% 70%;
+    --chart-3: 185 75% 60%;
+    --chart-4: 50 90% 70%;
+    --chart-5: 15 95% 75%;
 
     --sidebar-background: 240 5.9% 8%;
     --sidebar-foreground: 240 4.8% 90%;
-    --sidebar-primary: 180 90% 40%; /* Teal */
+    --sidebar-primary: 180 90% 40%; 
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 12%;
     --sidebar-accent-foreground: 240 4.8% 90%;
     --sidebar-border: 240 3.7% 12%;
-    --sidebar-ring: 180 90% 45%;
+    --sidebar-ring: 180 90% 45%; 
   }
 }
 
@@ -115,5 +110,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* font-family is inherited from html or applied by Tailwind's font-sans utility */
   }
 }
