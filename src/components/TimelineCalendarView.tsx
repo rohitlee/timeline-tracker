@@ -84,7 +84,7 @@ export function TimelineCalendarView({ entries, onMonthChange, currentMonth }: T
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-accent">Timeline Overview</CardTitle>
         <CardDescription className="text-muted-foreground">
-          Calendar view of your timeline entries. Click a day to select it.
+          Calendar view of your timeline entries. Missed dates are flagged.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex justify-center p-0 sm:p-2 md:p-4">
