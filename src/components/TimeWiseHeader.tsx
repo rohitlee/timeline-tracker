@@ -39,7 +39,7 @@ export function TimeWiseHeader({ userName }: TimeWiseHeaderProps) {
                 Hello, {userName}
               </span>
             )}
-            <Button variant="ghost" onClick={handleLogout} className="text-foreground hover:bg-muted">
+            <Button variant="ghost" onClick={handleLogout} className="text-foreground hover:bg-accent hover:text-accent-foreground">
               <LogOut className="mr-2 h-4 w-4" />
               Logout
             </Button>
